@@ -32,6 +32,8 @@ Designed for game patch **1.0.5**. Requires UE4SS with C++ mod support and the n
 
 All actions also have on-screen mouse controls. The action hints use the game's keyboard and Xbox glyphs and follow the active input device. Hold the left stick to repeat movement; vertical navigation preserves the column when crossing pages. Changing the previewed day/night set does not change your active equipment loadout. Each page holds up to 36 choices; focus a tile to see its name below the grid. The equipment panel shows the displayed outfit, with the selected category's name underneath. NPC appearances without an inventory image use their category symbol.
 
+Within each category, **Player Outfits** with inventory icons appear first, followed by **NPC Outfits** without item icons. Both groups sort alphabetically by their displayed names, ignoring case. Each group starts on its own page and has a small heading above the grid. **Original look** and **Hide**, where available, stay at the front of the list. The same order applies when filtering collected looks.
+
 ## Settings and saved outfits
 
 Use Mod Setting Menu to change **Enabled**, the **Wardrobe shortcut**, and **Logging**. Choose End, F7, F8 or F9 as the shortcut. Apply takes effect without restarting.
@@ -42,7 +44,7 @@ Selecting **Original look** restores that slot's equipped appearance. **Reset Se
 
 The character preview stays in place while you change looks or save outfits. Selecting a look updates its highlight and outfit summary without rebuilding the grid. Item images load as their page is built. Ordinary pickups update collected looks without rebuilding your clothing. Saving runs in the background; close the game normally to let outstanding saves finish.
 
-With Logging enabled, a completed page records its visible-entry and cached-image counts. Page construction is limited to two entries per continuation.
+With Logging enabled, a completed page records its group, visible-entry and cached-image counts. Page construction is limited to two entries per continuation. Grouping uses saved icon references without loading preview textures for the full catalog.
 
 Logging defaults to Off. Turn it on in Mod Setting Menu to record player attachment, game hub detection, tab creation, page opening, aggregate catalog, inventory, refresh and appearance-override counts, total work time, and the longest active mod tick in `Dawnwalker/Binaries/Win64/ue4ss/UE4SS.log`. Operational failures include the failed action and error detail, once per distinct message, even when detailed logging is off. Failed player setup stops after twelve attempts; a later player event or shortcut press can retry it.
 

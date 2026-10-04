@@ -1,5 +1,6 @@
 #include "Runtime.hpp"
 #include "NativeContract.hpp"
+#include "CatalogOrder.hpp"
 #include <Windows.h>
 #include <MinHook.h>
 #include <array>
@@ -153,9 +154,35 @@ bool attach(UObject* pawn){
     if(!tables(pawn))return false;beginCatalog();runtime.activeSet=loadout();runtime.model.switchSet(runtime.activeSet);runtime.playerReady=true;requestRefresh();if(logging)trace(L"Attached player: "+pawn->GetName());return true;
 }
 void beginCatalog(){if(catalogStarted||!clothingTable)return;catalogStarted=true;tablePhase=tableCursor=0;expectedRows=table(false)->GetRowMap().Num();runtime.looks.clear();itemLookup.clear();runtime.catalogReady=false;}
+bool hasPreviewIcon(UObject* item){
+    if(!item)return false;auto p=property(item,L"ItemImage");if(!p)return false;
+    if(p->IsA<FSoftObjectProperty>()){
+        // Test the saved reference, not whether its texture happens to be loaded.
+        // This never loads icons for off-screen catalog entries.
+        auto system=find(L"/Script/Engine.Default__KismetSystemLibrary");
+        if(function(system,L"IsValidSoftObjectReference")){
+            Call c(system,L"IsValidSoftObjectReference");auto target=c.field(L"SoftObjectReference");
+            if(target&&target->IsA<FSoftObjectProperty>()&&target->GetSize()==p->GetSize()){
+                target->CopyCompleteValue(c.value(L"SoftObjectReference"),p->ContainerPtrToValuePtr<void>(item));c.invoke();return c.resultInteger()!=0;
+            }
+        }
+        static bool reported{};if(!reported){warn(L"Item icon references could not be classified; appearances remain available in the NPC group.");reported=true;}return false;
+    }
+    return p->IsA<FObjectProperty>()&&readObject(p,item)!=nullptr;
+}
+std::string lookSortKey(const std::wstring& name){
+    // Compute the user's locale-aware, case-insensitive collation key once in
+    // the bounded catalog pass. Comparisons then use only owned bytes.
+    constexpr DWORD flags=LCMAP_SORTKEY|NORM_IGNORECASE|SORT_STRINGSORT;
+    int size=LCMapStringEx(LOCALE_NAME_USER_DEFAULT,flags,name.c_str(),-1,nullptr,0,nullptr,nullptr,0);
+    if(size<=0)return {};std::string key(size,'\0');
+    if(!LCMapStringEx(LOCALE_NAME_USER_DEFAULT,flags,name.c_str(),-1,reinterpret_cast<LPWSTR>(key.data()),size,nullptr,nullptr,0))return {};
+    return key;
+}
 bool stepCatalog(){
     if(!catalogStarted||runtime.catalogReady)return true;
-    auto t=table(tablePhase==1);if(!t){catalogStarted=false;if(tablePhase==1)runtime.catalogReady=true;return true;}
+    auto complete=[] {std::sort(runtime.looks.begin(),runtime.looks.end(),lookOrder<Look>);runtime.catalogReady=true;inventoryDirty=true;menuRedraw();};
+    auto t=table(tablePhase==1);if(!t){catalogStarted=false;if(tablePhase==1)complete();return true;}
     auto type=static_cast<UScriptStruct*>((tablePhase==1?weaponType:rowType).get());if(!type){catalogStarted=false;warn(L"Appearance catalog type is no longer available; reopen Wardrobe after loading.");return true;}
     auto& rows=t->GetRowMap();if(rows.Num()>16384||rows.GetMaxIndex()>32768){warn(L"Appearance catalog exceeds the supported safety limit.");catalogStarted=false;return true;}
     if(rows.Num()!=expectedRows){catalogStarted=false;beginCatalog();return false;}
@@ -167,13 +194,14 @@ bool stepCatalog(){
         auto item=readObject(property(type,L"Item"),row);
         if(!item&&tablePhase==1){auto path=L"/Game/_Dawnwalker/Inventory/Items/"+look.row+L"."+look.row;item=find(path.c_str());}
         if(item){look.item=Ref(item);look.itemPath=item->GetPathName();auto name=text(property(item,L"ItemName"),item);if(!name.empty())look.label=name;itemLookup[item]={look.item,look.row};}
+        look.hasPreviewIcon=hasPreviewIcon(item);look.sortKey=lookSortKey(look.label);
         runtime.looks.push_back(std::move(look));
         if(std::chrono::steady_clock::now()-start>std::chrono::microseconds(500))break;
     }
     if(logging)++runtime.catalogSteps;
     if(tableCursor>=static_cast<unsigned>(rows.GetMaxIndex())){
         if(tablePhase==0&&weaponTable){tablePhase=1;tableCursor=0;expectedRows=table(true)->GetRowMap().Num();}
-        else {runtime.catalogReady=true;inventoryDirty=true;std::stable_sort(runtime.looks.begin(),runtime.looks.end(),[](auto& a,auto& b){return a.label<b.label;});menuRedraw();}
+        else complete();
     }
     return runtime.catalogReady;
 }

@@ -6,7 +6,7 @@
 #include <functional>
 
 namespace Wardrobe {
-struct Look {Slot slot;std::wstring row,label,itemPath;Ref item;};
+struct Look {Slot slot;std::wstring row,label,itemPath;Ref item;bool hasPreviewIcon{};std::string sortKey;};
 struct Runtime {
     Model model;Settings settings;std::filesystem::path directory;
     Ref player,controller,inventory,appearance,doll,dollAppearance,hub;

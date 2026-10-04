@@ -2,6 +2,7 @@
 #include "ScriptEvent.hpp"
 #include "MenuWidgets.hpp"
 #include "MenuInput.hpp"
+#include "CatalogOrder.hpp"
 #include <Unreal/UEnum.hpp>
 #include <map>
 #include <Unreal/Core/Windows/AllowWindowsPlatformTypes.hpp>
@@ -14,7 +15,7 @@ namespace Wardrobe {
 namespace {
 constexpr auto tagName=L"UI.Menu.HUB.WardrobeTransmog";
 Ref page,tree,root,grid,title,footer,navbar,tabButton,previewImage;
-Ref countLabel,pageLabel,modal,modalGrid,modalTitle,modalHelp,fontStyle,gridFrame,activeFrame,categoryFrame;
+Ref countLabel,pageLabel,groupLabel,modal,modalGrid,modalTitle,modalHelp,fontStyle,gridFrame,activeFrame,categoryFrame;
 std::array<Ref,5> categoryIcons,summaryImages,summaryFills,summaryFrames;
 Ref summaryTitle,summaryChoice;
 std::map<UObject*,std::pair<Ref,Ref>> itemIcons;
@@ -31,6 +32,8 @@ struct Button {Ref object,label,highlight,glyph;std::function<void()> click;int 
 std::vector<Button> controls;
 struct Control {Ref parent;std::wstring caption;std::function<void()> click;Layout::Rect rect;int category=-1;};std::deque<Control> pendingControls;
 std::vector<Look> filtered;std::vector<Choice> pageChoices;
+std::vector<CatalogPage> catalogPages{{}};
+const CatalogPage& currentPage(){return catalogPages.at(runtime.model.page);}
 std::array<bool,256> previousKeys{};WORD previousPad{};BYTE previousLeft{},previousRight{};POINT previousMouse{};uint64_t xPressed{};
 std::array<bool,256> keyEdges{};
 StickNavigation stick;
@@ -95,10 +98,10 @@ void button(UObject* parent,const std::wstring& text,std::function<void()> callb
 }
 void focusPaint(){
     if(focus>=buttons.size())return;
-    if(!popup&&runtime.model.page*Layout::pageSize+buttons.size()>pageChoices.size())return;
-    for(unsigned i=0;i<buttons.size();++i){bool worn=!popup&&runtime.model.sets[runtime.model.displayedSet][runtime.model.category]==pageChoices[runtime.model.page*Layout::pageSize+i];
+    if(!popup&&currentPage().begin+buttons.size()>pageChoices.size())return;
+    for(unsigned i=0;i<buttons.size();++i){bool worn=!popup&&runtime.model.sets[runtime.model.displayedSet][runtime.model.category]==pageChoices[currentPage().begin+i];
         auto h=buttons[i].highlight.get();UI::visible(h,i==focus||worn);if(h)UI::tint(h,worn?UI::gold:UI::white);}
-    if(!popup)setText(footer.get(),L"SetText",caption(pageChoices[runtime.model.page*Layout::pageSize+focus]));shownFocus=focus;
+    if(!popup)setText(footer.get(),L"SetText",caption(pageChoices[currentPage().begin+focus]));shownFocus=focus;
 }
 void updateSummary(){
     for(unsigned i=0;i<5;++i){auto& choice=runtime.model.sets[runtime.model.displayedSet][i];if(auto p=summaryImages[i].get()){UI::texture(p,choiceIcon(choice,i));UI::tint(p,choice.mode==Choice::Mode::Hidden?UI::muted:UI::white);}if(auto p=summaryFills[i].get()){auto fill=rarityFill(choice);UI::texture(p,fill);UI::visible(p,fill!=nullptr);}UI::visible(summaryFrames[i].get(),i==runtime.model.category);}
@@ -154,16 +157,19 @@ void preview(){
 }
 void stopPreview(){if(auto p=runtime.doll.get())call(p,L"K2_DestroyActor");runtime.doll={};runtime.dollAppearance={};}
 void rebuildList(){
-    filtered.clear();pageChoices.clear();for(const auto& look:runtime.looks)if(static_cast<unsigned>(look.slot)==runtime.model.category&&(runtime.model.allLooks||runtime.model.collected.contains(look.row)))filtered.push_back(look);
+    filtered.clear();pageChoices.clear();if(runtime.catalogReady)for(const auto& look:runtime.looks)if(static_cast<unsigned>(look.slot)==runtime.model.category&&(runtime.model.allLooks||runtime.model.collected.contains(look.row)))filtered.push_back(look);
     pageChoices.push_back({});if(hideAllowed(static_cast<Slot>(runtime.model.category)))pageChoices.push_back({Choice::Mode::Hidden,{}});
+    unsigned options=static_cast<unsigned>(pageChoices.size()),player=0;for(const auto& look:filtered)if(look.hasPreviewIcon)++player;
     for(auto& look:filtered)pageChoices.push_back({Choice::Mode::Look,look.row});
-    runtime.model.page=std::min(runtime.model.page,Layout::pages(static_cast<unsigned>(pageChoices.size()))-1);focus=popup?0:std::min(nextFocus.value_or(0),Layout::count(static_cast<unsigned>(pageChoices.size()),runtime.model.page)-1);nextFocus.reset();
+    catalogPages=groupPages(options,player,static_cast<unsigned>(filtered.size())-player);
+    runtime.model.page=std::min(runtime.model.page,static_cast<unsigned>(catalogPages.size())-1);focus=popup?0:std::min(nextFocus.value_or(0),currentPage().count-1);nextFocus.reset();
 }
 void draw(){
     auto panel=popup?modalGrid.get():grid.get();if(!panel)return;call(panel,L"ClearChildren");buttons.clear();tileCursor=0;rebuildList();shownFocus=~0u;
     setText(title.get(),L"SetText",slotLabels[runtime.model.category]);
     setText(countLabel.get(),L"SetText",runtime.catalogReady?std::to_wstring(filtered.size())+(runtime.model.allLooks?L" looks (all)":L" looks (collected)"):L"Loading looks...");
-    setText(pageLabel.get(),L"SetText",std::to_wstring(runtime.model.page+1)+L" / "+std::to_wstring(Layout::pages(static_cast<unsigned>(pageChoices.size()))));
+    setText(pageLabel.get(),L"SetText",std::to_wstring(runtime.model.page+1)+L" / "+std::to_wstring(catalogPages.size()));
+    setText(groupLabel.get(),L"SetText",currentPage().group==LookGroup::Player?L"PLAYER OUTFITS":currentPage().group==LookGroup::NPC?L"NPC OUTFITS":runtime.catalogReady?L"APPEARANCE OPTIONS":L"LOADING OUTFITS...");
     setText(footer.get(),L"SetText",L"");UI::visible(modal.get(),popup!=0);
     setText(modalTitle.get(),L"SetText",popup==1?L"SAVE OUTFIT":L"LOAD OUTFIT");
     setText(modalHelp.get(),L"SetText",popup==1?L"Choose a slot to save the displayed outfit.":L"Choose a saved outfit to wear.");
@@ -171,19 +177,19 @@ void draw(){
 }
 void addTiles(){
     auto panel=popup?modalGrid.get():grid.get();if(!panel)return;
-    unsigned total=popup?3:Layout::count(static_cast<unsigned>(pageChoices.size()),runtime.model.page);
+    unsigned total=popup?3:currentPage().count;
     // At most two visible entries per continuation. Textures are resolved only
     // for those entries and retained by their brushes, never for the full catalog.
     bool added=tileCursor<total;for(unsigned n=0;n<2&&tileCursor<total;++n,++tileCursor){
         auto index=tileCursor;
         if(popup){auto name=L"Outfit "+std::to_wstring(index+1)+(runtime.model.presets[index]?L"     Saved":L"     Empty");button(panel,name,[index]{bool saving=popup==1;if(!saving&&!runtime.model.presets[index])return;bool change=saving?runtime.model.save(index):runtime.model.load(index);if(change){runtime.dirty=true;if(!saving)requestRefresh(runtime.model.displayedSet==runtime.activeSet,true);}popup=0;redraw=true;},{0,double(index)*94,692,80});}
-        else {auto absolute=runtime.model.page*Layout::pageSize+index;auto choice=pageChoices[absolute];auto icon=choiceIcon(choice,runtime.model.category);
+        else {auto absolute=currentPage().begin+index;auto choice=pageChoices[absolute];auto icon=choiceIcon(choice,runtime.model.category);
             button(panel,caption(choice),[choice]{selectLook(static_cast<Slot>(runtime.model.category),choice);},Layout::tile(index),false,-1,icon,rarityFill(choice));
             if(choice.mode!=Choice::Mode::Look){Call content(buttons.back().object.get(),L"GetContent");content.invoke();if(auto body=content.resultObject()){plate(body,{2,67,90,25},UI::ink);auto t=label(body,choice.mode==Choice::Mode::Hidden?L"HIDE":L"ORIGINAL",{0,67,94,25},17);setNumber(t,L"SetJustification",L"InJustification",1);}}
         }
     }
     if(added||shownFocus!=focus)focusPaint();
-    if(added&&tileCursor==total&&logging)trace(L"Wardrobe view ready: visible="+std::to_wstring(total)+L", cached item icons="+std::to_wstring(itemIcons.size())+L", dialog="+std::to_wstring(popup));
+    if(added&&tileCursor==total&&logging)trace(L"Wardrobe view ready: visible="+std::to_wstring(total)+L", cached item icons="+std::to_wstring(itemIcons.size())+L", dialog="+std::to_wstring(popup)+L", group="+(currentPage().group==LookGroup::Player?L"player":currentPage().group==LookGroup::NPC?L"npc":L"options"));
 }
 void build(){
     auto p=page.get();if(!p||!tree)return;
@@ -202,9 +208,10 @@ void build(){
     auto stage=widget(L"/Script/UMG.CanvasPanel");UI::fill(child(size,stage));root=Ref(stage);setNumber(stage,L"SetClipping",L"InClipping",1);
     // Leave the page transparent over the hub's fullscreen inventory artwork.
     previewImage=Ref(image(stage,nullptr,Layout::doll));
-    title=Ref(label(stage,L"Armour",{128,112,380,36},18));
-    countLabel=Ref(label(stage,L"Loading looks...",{518,112,246,36},18));setNumber(countLabel.get(),L"SetJustification",L"InJustification",2);
-    plate(stage,{128,154,624,1},UI::muted);grid=Ref(canvas(stage,Layout::catalog));
+    title=Ref(label(stage,L"Armour",Layout::categoryTitle,18));
+    countLabel=Ref(label(stage,L"Loading looks...",Layout::catalogCount,18));setNumber(countLabel.get(),L"SetJustification",L"InJustification",2);
+    groupLabel=Ref(label(stage,L"",Layout::groupTitle,15,UI::muted));
+    plate(stage,{128,164,624,1},UI::muted);grid=Ref(canvas(stage,Layout::catalog));
     footer=Ref(label(stage,L"",Layout::lookName,20));
     pageLabel=Ref(label(stage,L"1 / 1",Layout::pageCount,18,UI::muted));setNumber(pageLabel.get(),L"SetJustification",L"InJustification",1);
     controls.clear();pendingControls.clear();
@@ -218,7 +225,7 @@ void build(){
     summaryTitle=Ref(label(stage,L"Armour",{1600,492,296,64},18,UI::muted));
     summaryChoice=Ref(label(stage,L"Original look",{1600,564,296,164},20));
     action(L"<  Previous",Layout::pagePrevious,[]{if(runtime.model.page){--runtime.model.page;redraw=true;}});
-    action(L"Next  >",Layout::pageNext,[]{if((runtime.model.page+1)*Layout::pageSize<pageChoices.size()){++runtime.model.page;redraw=true;}});
+    action(L"Next  >",Layout::pageNext,[]{if(runtime.model.page+1<catalogPages.size()){++runtime.model.page;redraw=true;}});
     action(L"Back",Layout::prompts[0],[]{closeMenu();},15);
     action(L"Hide slot",Layout::prompts[1],[]{selectLook(static_cast<Slot>(runtime.model.category),{Choice::Mode::Hidden,{}});},16);
     action(L"All looks",Layout::prompts[2],[]{runtime.model.allLooks=!runtime.model.allLooks;runtime.dirty=true;runtime.model.page=0;redraw=true;},11);
@@ -281,11 +288,15 @@ bool inject(){
     if(logging)trace(L"Wardrobe tab added to the hub.");return true;
 }
 void move(int delta){
-    if(buttons.empty())return;auto total=popup?3:Layout::count(static_cast<unsigned>(pageChoices.size()),runtime.model.page);if(buttons.size()<total)return;
+    if(buttons.empty())return;auto total=popup?3:currentPage().count;if(buttons.size()<total)return;
     int next=static_cast<int>(focus)+delta;
     if(!popup&&(next<0||next>=static_cast<int>(buttons.size()))){
-        int absolute=int(runtime.model.page*Layout::pageSize)+next;
-        if(absolute>=0&&absolute<int(pageChoices.size())){runtime.model.page=unsigned(absolute)/Layout::pageSize;nextFocus=unsigned(absolute)%Layout::pageSize;redraw=true;return;}
+        bool forward=next>=int(buttons.size());
+        if(forward?runtime.model.page+1<catalogPages.size():runtime.model.page>0){
+            runtime.model.page=forward?runtime.model.page+1:runtime.model.page-1;auto count=currentPage().count;
+            unsigned target=std::abs(delta)==int(Layout::columns)?(forward?0:((count-1)/Layout::columns)*Layout::columns)+focus%Layout::columns:forward?0:count-1;
+            nextFocus=std::min(target,count-1);redraw=true;return;
+        }
     }
     focus=static_cast<unsigned>((next%static_cast<int>(buttons.size())+static_cast<int>(buttons.size()))%static_cast<int>(buttons.size()));focusPaint();
 }
@@ -349,7 +360,7 @@ void closeMenu(){
 }
 void resetMenu(){
     auto oldPage=page;
-    runtime.menuOpen=false;wantsOpen=false;popup=0;injection.cancel();page={};tree={};root={};grid={};title={};footer={};navbar={};tabButton={};previewImage={};showFunction={};hubGraph={};createTabFunction={};activated={};deactivated={};rebuilt={};buttons.clear();controls.clear();pendingControls.clear();filtered.clear();pageChoices.clear();built=false;countLabel={};pageLabel={};modal={};modalGrid={};modalTitle={};modalHelp={};fontStyle={};gridFrame={};activeFrame={};categoryFrame={};categoryIcons={};summaryImages={};summaryFills={};summaryFrames={};summaryTitle={};summaryChoice={};itemIcons.clear();rarityTextures.clear();glyphTextures.clear();xPressed=0;stick.reset();nextFocus.reset();
+    runtime.menuOpen=false;wantsOpen=false;popup=0;injection.cancel();page={};tree={};root={};grid={};title={};footer={};navbar={};tabButton={};previewImage={};showFunction={};hubGraph={};createTabFunction={};activated={};deactivated={};rebuilt={};buttons.clear();controls.clear();pendingControls.clear();filtered.clear();pageChoices.clear();built=false;countLabel={};pageLabel={};groupLabel={};catalogPages={{}};modal={};modalGrid={};modalTitle={};modalHelp={};fontStyle={};gridFrame={};activeFrame={};categoryFrame={};categoryIcons={};summaryImages={};summaryFills={};summaryFrames={};summaryTitle={};summaryChoice={};itemIcons.clear();rarityTextures.clear();glyphTextures.clear();xPressed=0;stick.reset();nextFocus.reset();
     if(auto p=oldPage.get())try{call(p,L"RemoveFromParent");}catch(const std::exception& e){failure(L"Removing Wardrobe page",e);}
 }
 void stepMenu(){

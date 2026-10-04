@@ -6,6 +6,7 @@ struct Rect {double x,y,w,h;};
 inline constexpr double width=1920,height=1000;
 inline constexpr unsigned columns=6,rows=6,pageSize=columns*rows;
 inline constexpr Rect catalog{128,166,636,636};
+inline constexpr Rect categoryTitle{128,100,380,32},catalogCount{518,100,246,32},groupTitle{128,136,636,26};
 inline constexpr Rect doll{790,-48,1000,1000};
 inline constexpr Rect summary{1600,56,296,692};
 inline constexpr Rect dialog{550,242,820,516};
