@@ -1,4 +1,5 @@
 - Choose your equipment's appearance from a dedicated Wardrobe tab.
+- Fix Wardrobe appearing at the end of the tab bar instead of beside Inventory.
 - Browse alphabetical Player Outfits first, followed by NPC Outfits, with group headings and Original/Hide kept at the front.
 - Find Wardrobe immediately after Inventory, with smaller category symbols, native key glyphs, the inventory background and compact equipment slots.
 - Keep bottom actions fully visible, including on ultrawide screens.

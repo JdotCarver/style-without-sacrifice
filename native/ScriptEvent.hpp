@@ -1,7 +1,15 @@
 #pragma once
 #include "Reflection.hpp"
+#include <Unreal/FFrame.hpp>
 
 namespace Wardrobe {
+// Blueprint reference parameters (including const inputs) use OutParms.
+// Locals can contain only a default value at that property's offset.
+inline void* scriptParameter(FProperty* p,void* locals,FFrame* frame){
+    if(!p)return nullptr;
+    if(p->GetPropertyFlags()&CPF_OutParm)return frame?FindOutParamValueAddress(*frame,p):nullptr;
+    return locals?p->ContainerPtrToValuePtr<void>(locals):nullptr;
+}
 // Unreal may execute a parameterless Blueprint event directly at an entry
 // inside its event graph. Bind both routes from reflected function metadata.
 struct ScriptEvent {

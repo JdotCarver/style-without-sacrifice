@@ -19,6 +19,7 @@ EXPORTS
     ?DestroyStruct@UStruct@Unreal@RC@@QEBAXPEAXH@Z
     ?FindFirstOf@UObjectGlobals@Unreal@RC@@YAPEAVUObject@23@PEB_W@Z
     ?FindObject@UObjectGlobals@Unreal@RC@@YAPEAVUObject@23@PEAVUClass@23@PEAV423@PEB_W_NPEAUObjectSearcher@23@@Z
+    ?FindOutParamValueAddress@Unreal@RC@@YAPEAXAEAUFFrame@12@PEAVFProperty@12@@Z
     ?FindProperty@UStruct@Unreal@RC@@QEAAPEAVFProperty@23@VFName@23@@Z
     ?ForEachName@UEnum@Unreal@RC@@QEAA?AU?$Generator@U?$TTuple@VFName@Unreal@RC@@_J@Unreal@RC@@@3@XZ
     ?ForEachProperty@UStruct@Unreal@RC@@QEAA?AU?$TFieldRange@VFProperty@Unreal@RC@@@23@XZ

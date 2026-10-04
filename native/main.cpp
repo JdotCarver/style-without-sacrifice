@@ -48,7 +48,7 @@ void setup(){
     // function pointers. No Lua is invoked by these native callbacks.
     options.HookName=L"Wardrobe hub selection";
     callbacks.push_back(Hook::RegisterProcessLocalScriptFunctionPreCallback([](auto& info,UObject* owner,FFrame& frame,void*){if(active)menuScriptPre(owner,frame.Node(),frame.Locals(),info);},options));
-    callbacks.push_back(Hook::RegisterProcessLocalScriptFunctionPostCallback([](auto&,UObject* owner,FFrame& frame,void*){if(active)menuScriptPost(owner,frame.Node(),frame.Locals());},options));
+    callbacks.push_back(Hook::RegisterProcessLocalScriptFunctionPostCallback([](auto&,UObject* owner,FFrame& frame,void*){if(active)menuScriptPost(owner,frame.Node(),frame.Locals(),&frame);},options));
     for(auto id:callbacks)if(id==Hook::ERROR_ID){warn(L"A required lifecycle hook could not be registered; restart with the required UE4SS native callback support.");stop();return;}
     // Activation fires after the widget tree exists, including pooled hubs.
     // There is no Wardrobe callback on every UObject construction.

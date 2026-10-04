@@ -2,6 +2,7 @@
 
 ## 0.1.0
 
+- Fix Wardrobe appearing at the end of the tab bar instead of beside Inventory.
 - List player appearances with icons first, then NPC appearances, alphabetically within each group; add group headings and keep Original/Hide at the front.
 - Place Wardrobe immediately after Inventory, including keyboard and controller tab navigation.
 - Match the inventory background, category size, key glyphs and equipment panel more closely; keep bottom actions inside the screen.

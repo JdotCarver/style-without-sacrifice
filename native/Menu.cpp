@@ -262,10 +262,11 @@ bool createWardrobeTab(){
     struct Guard{Guard(){insertingTab=true;}~Guard(){insertingTab=false;}}guard;
     c.invoke();auto b=readObject(c.field(L"Out Button"),c.data());if(!b)b=c.resultObject();tabButton=Ref(b);return bool(tabButton);
 }
-bool inventoryRow(UFunction* fn,void* params){
-    auto row=property(static_cast<UStruct*>(fn),L"HubTabRow");if(!params||!row||!row->IsA<FStructProperty>())return false;
+bool inventoryRow(UFunction* fn,void* params,FFrame* frame){
+    auto row=property(static_cast<UStruct*>(fn),L"HubTabRow");if(!row||!row->IsA<FStructProperty>())return false;
+    auto data=scriptParameter(row,params,frame);if(!data)return false;
     auto st=static_cast<FStructProperty*>(row)->GetStruct();auto p=property(st,L"TabTag");if(!p||!p->IsA<FStructProperty>())return false;
-    auto tagType=static_cast<FStructProperty*>(p)->GetStruct();auto data=row->ContainerPtrToValuePtr<void>(params);
+    auto tagType=static_cast<FStructProperty*>(p)->GetStruct();
     return text(property(tagType,L"TagName"),p->ContainerPtrToValuePtr<void>(data))==L"UI.Menu.HUB.Inventory";
 }
 bool inject(){
@@ -317,7 +318,7 @@ void menuScriptPre(UObject* owner,UFunction* fn,void* params,Hook::TCallbackIter
     if(ourTag(fn,params)){info.PreventOriginalFunctionCall();if(runtime.settings.enabled){if(runtime.playerReady)wantsOpen=true;else requestOpen();}}
     else if(runtime.menuOpen){runtime.menuOpen=false;stopPreview();writeStore();}
 }
-void menuScriptPost(UObject* owner,UFunction* fn,void* params){
+void menuScriptPost(UObject* owner,UFunction* fn,void* params,FFrame* frame){
     // Parameterless Blueprint events can skip BP_OnActivated and run the
     // compiled event graph directly. Its first execution discovers the hub.
     if(fn&&owner&&(hubGraph.address==fn||!hubGraph.address)){
@@ -332,7 +333,7 @@ void menuScriptPost(UObject* owner,UFunction* fn,void* params){
     }
     if(navbar.matches(owner)){
         if(createTabFunction.matches(fn)&&!tabButton&&!insertingTab){
-            try{if(inventoryRow(fn,params))createWardrobeTab();}catch(const std::exception& e){failure(L"Placing Wardrobe after Inventory",e);}
+            try{if(inventoryRow(fn,params,frame)&&createWardrobeTab()&&logging)trace(L"Wardrobe tab inserted after Inventory.");}catch(const std::exception& e){failure(L"Placing Wardrobe after Inventory",e);}
         }
         if(rebuilt.matches(fn,params)&&!tabButton&&!orderingNavbar){injection.cancel();injection.request(runtime.now);}
     }
