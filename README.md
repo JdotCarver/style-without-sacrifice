@@ -4,7 +4,7 @@ Choose how your equipment looks from a dedicated **Wardrobe** tab in The Blood o
 
 Browse armour, legwear, gloves/wristbands, footwear and weapon appearances. Wristbands and gauntlets share the **Gloves / Wristbands** category. Switch between collected looks and the full appearance catalog, choose separate day and night outfits, and save three outfit presets. Gauntlets, feet and the sheathed weapon can be hidden. The drawn weapon remains visible.
 
-Open Wardrobe with **End**, or select its tab in the character menu. The page includes a character preview, mouse controls, keyboard navigation and Xbox-style controller controls.
+Open Wardrobe with **End**, or select its tab in the character menu. Browse a six-column inventory-style grid alongside a large character preview and a summary of your outfit. The page uses the game's fonts, equipment icons and rarity backgrounds, with gold selection markers and separate save/load dialogs. The layout scales with the available menu area. Mouse, keyboard and Xbox-style controller controls are supported.
 
 ## Installation
 
@@ -30,7 +30,7 @@ Designed for game patch **1.0.5**. Requires UE4SS with C++ mod support and the n
 | Reset displayed outfit | R | Hold X |
 | Close or cancel | Escape | B |
 
-All actions also have on-screen mouse controls. Changing the previewed day/night set does not change your active equipment loadout.
+All actions also have on-screen mouse controls. The action hints change between keyboard and controller prompts. Changing the previewed day/night set does not change your active equipment loadout. Each page holds up to 36 choices; focus a tile to see its full name. NPC appearances without an inventory image use their category symbol.
 
 ## Settings and saved outfits
 
@@ -40,7 +40,9 @@ The mod creates `settings.ini` and `wardrobe.dat` inside `ue4ss/Mods/WardrobeTra
 
 Selecting **Original look** restores that slot's equipped appearance. **Reset Set** clears the displayed outfit. Presets store one complete outfit and can be loaded into either set.
 
-The character preview stays in place while you change looks or save outfits. Ordinary pickups update collected looks without rebuilding your clothing. Saving runs in the background; close the game normally to let outstanding saves finish.
+The character preview stays in place while you change looks or save outfits. Selecting a look updates its highlight and outfit summary without rebuilding the grid. Item images load as their page is built. Ordinary pickups update collected looks without rebuilding your clothing. Saving runs in the background; close the game normally to let outstanding saves finish.
+
+With Logging enabled, a completed page records its visible-entry and cached-image counts. Page construction is limited to two entries per continuation.
 
 Logging defaults to Off. Turn it on in Mod Setting Menu to record player attachment, game hub detection, tab creation, page opening, aggregate catalog, inventory, refresh and appearance-override counts, total work time, and the longest active mod tick in `Dawnwalker/Binaries/Win64/ue4ss/UE4SS.log`. Operational failures include the failed action and error detail, once per distinct message, even when detailed logging is off. Failed player setup stops after twelve attempts; a later player event or shortcut press can retry it.
 

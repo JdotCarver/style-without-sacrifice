@@ -2,6 +2,8 @@
 
 ## 0.1.0
 
+- Replace the plain button layout with an inventory-style icon grid, game fonts and rarity frames, a large preview, and an outfit summary.
+- Add separate outfit dialogs, clear selection highlights and keyboard/controller action hints; scale the page to the available menu area.
 - Added a Wardrobe tab with a character preview and mouse, keyboard and controller controls.
 - Added separate day and night outfits, collected/all appearance filters and three outfit presets.
 - Added hide options for gauntlets, feet and the sheathed weapon.

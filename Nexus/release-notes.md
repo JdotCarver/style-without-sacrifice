@@ -1,4 +1,6 @@
 - Choose your equipment's appearance from a dedicated Wardrobe tab.
+- Browse an inventory-style icon grid with game fonts, rarity frames, a large preview and an outfit summary.
+- Use separate outfit dialogs and keyboard/controller action hints in a layout that scales with the menu.
 - Save separate day and night looks and three outfit presets.
 - Browse with mouse, keyboard or controller and configure your shortcut in Mod Setting Menu.
 - Keep the preview in place while changing looks, and save outfits in the background.
