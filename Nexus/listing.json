@@ -1,0 +1,11 @@
+{
+  "name": "Wardrobe - Transmog Your Equipment",
+  "version": "0.1.0",
+  "fileName": "Wardrobe-Transmog-Your-Equipment.zip",
+  "game": "thebloodofdawnwalker",
+  "requirements": [
+    {"name": "The Blood of Dawnwalker", "version": "1.0.5"},
+    {"name": "UE4SS", "notes": "C++ mod and native lifecycle/Blueprint callback support"},
+    {"name": "Mod Setting Menu", "version": "1.0.7.1 or later", "url": "https://www.nexusmods.com/thebloodofdawnwalker/mods/271"}
+  ]
+}

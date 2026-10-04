@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mod>
+  <info>
+    <name>Wardrobe - Transmog Your Equipment</name>
+    <modid>WardrobeTransmog</modid>
+    <description>A Wardrobe tab with separate day and night outfits, collected and all-look browsing, three outfit presets and Mod Setting Menu controls.</description>
+    <author>my-mods</author>
+    <version>0.1.0</version>
+    <created_on>2026-10-04</created_on>
+  </info>
+  <supports><game>The Blood of Dawnwalker</game><loader>UE4SS with native C++ callback support</loader></supports>
+  <dependencies><dependency>Mod Setting Menu 1.0.7.1 or later</dependency></dependencies>
+</mod>

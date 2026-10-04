@@ -1,0 +1,3 @@
+- Choose your equipment's appearance from a dedicated Wardrobe tab.
+- Save separate day and night looks and three outfit presets.
+- Browse with mouse, keyboard or controller and configure your shortcut in Mod Setting Menu.

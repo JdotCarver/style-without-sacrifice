@@ -1,0 +1,5 @@
+.local/
+build/
+dist/
+*.zip
+AGENTS.md
