@@ -2,6 +2,10 @@
 
 ## 0.1.0
 
+- Place Wardrobe immediately after Inventory, including keyboard and controller tab navigation.
+- Match the inventory background, category size, key glyphs and equipment panel more closely; keep bottom actions inside the screen.
+- Navigate items with the left stick, including held movement and column-preserving page changes.
+- Switch day/night outfits with P or Start/Menu instead of Tab or View.
 - Replace the plain button layout with an inventory-style icon grid, game fonts and rarity frames, a large preview, and an outfit summary.
 - Add separate outfit dialogs, clear selection highlights and keyboard/controller action hints; scale the page to the available menu area.
 - Added a Wardrobe tab with a character preview and mouse, keyboard and controller controls.

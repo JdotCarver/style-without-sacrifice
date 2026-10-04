@@ -4,7 +4,7 @@ Choose how your equipment looks from a dedicated **Wardrobe** tab in The Blood o
 
 Browse armour, legwear, gloves/wristbands, footwear and weapon appearances. Wristbands and gauntlets share the **Gloves / Wristbands** category. Switch between collected looks and the full appearance catalog, choose separate day and night outfits, and save three outfit presets. Gauntlets, feet and the sheathed weapon can be hidden. The drawn weapon remains visible.
 
-Open Wardrobe with **End**, or select its tab in the character menu. Browse a six-column inventory-style grid alongside a large character preview and a summary of your outfit. The page uses the game's fonts, equipment icons and rarity backgrounds, with gold selection markers and separate save/load dialogs. The layout scales with the available menu area. Mouse, keyboard and Xbox-style controller controls are supported.
+Open Wardrobe with **End**, or select its tab immediately after **Inventory** in the character menu. Browse a six-column grid alongside a large character preview and compact equipment slots. The page uses the inventory background, game fonts, equipment icons, rarity frames and keyboard/controller glyphs, with gold selection markers and separate save/load dialogs. Smaller category controls and inset action prompts keep the layout close to Inventory, including on ultrawide screens. Mouse, keyboard and Xbox-style controller controls are supported.
 
 ## Installation
 
@@ -21,16 +21,16 @@ Designed for game patch **1.0.5**. Requires UE4SS with C++ mod support and the n
 | --- | --- | --- |
 | Open Wardrobe | End, configurable | Select the Wardrobe hub tab |
 | Change category | A / D | Left / right trigger |
-| Select a look | Arrow keys, Enter | D-pad, A |
+| Select a look | Arrow keys, Enter | Left stick or D-pad, A |
 | Change page | Page Up / Page Down | Continue beyond the first or last tile |
-| Day / night preview | Tab | View / Back |
+| Day / night preview | P | Start / Menu |
 | Collected / all looks | Y | Right stick click |
 | Hide supported slot | F | Left stick click |
 | Save / load outfit | T / S | X / Y |
 | Reset displayed outfit | R | Hold X |
 | Close or cancel | Escape | B |
 
-All actions also have on-screen mouse controls. The action hints change between keyboard and controller prompts. Changing the previewed day/night set does not change your active equipment loadout. Each page holds up to 36 choices; focus a tile to see its full name. NPC appearances without an inventory image use their category symbol.
+All actions also have on-screen mouse controls. The action hints use the game's keyboard and Xbox glyphs and follow the active input device. Hold the left stick to repeat movement; vertical navigation preserves the column when crossing pages. Changing the previewed day/night set does not change your active equipment loadout. Each page holds up to 36 choices; focus a tile to see its name below the grid. The equipment panel shows the displayed outfit, with the selected category's name underneath. NPC appearances without an inventory image use their category symbol.
 
 ## Settings and saved outfits
 

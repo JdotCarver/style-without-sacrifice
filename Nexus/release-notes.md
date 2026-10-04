@@ -1,4 +1,7 @@
 - Choose your equipment's appearance from a dedicated Wardrobe tab.
+- Find Wardrobe immediately after Inventory, with smaller category symbols, native key glyphs, the inventory background and compact equipment slots.
+- Keep bottom actions fully visible, including on ultrawide screens.
+- Browse with the left stick and switch day/night outfits with P or Start/Menu.
 - Browse an inventory-style icon grid with game fonts, rarity frames, a large preview and an outfit summary.
 - Use separate outfit dialogs and keyboard/controller action hints in a layout that scales with the menu.
 - Save separate day and night looks and three outfit presets.
