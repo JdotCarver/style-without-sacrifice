@@ -1,3 +1,3 @@
-Banner and thumbnail use an in-game Inventory screenshot supplied by oOCamilleOo. Game imagery: The Blood of Dawnwalker, Rebel Wolves / Bandai Namco Entertainment. Cropping and title overlays only; no AI-generated imagery. These promotional images do not depict the final Wardrobe interface. Game imagery is not covered by the source-code MIT license.
+Banner and thumbnail use an in-game Inventory screenshot supplied by oOCamilleOo. Game imagery: The Blood of Dawnwalker, Rebel Wolves / Bandai Namco Entertainment. Cropped with title overlays and background dimming; a small desktop tooltip was removed using adjacent screenshot texture. No AI-generated imagery. These promotional images do not depict the final Wardrobe interface. Game imagery is not covered by the source-code MIT license.
 
 Unofficial community content. Game imagery is used under the community-content guidelines at https://dawnwalkergame.com/us/en/community .

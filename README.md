@@ -42,6 +42,8 @@ The mod creates `settings.ini` and `wardrobe.dat` inside `ue4ss/Mods/WardrobeTra
 
 Selecting **Original look** restores that slot's equipped appearance. **Reset Set** clears the displayed outfit. Presets store one complete outfit and can be loaded into either set.
 
+**Known issue:** Removing wrist equipment can reveal a malformed mesh around the wrists. I'm investigating whether this can be fixed.
+
 The character preview stays in place while you change looks or save outfits. Selecting a look updates its highlight and outfit summary without rebuilding the grid. Item images load as their page is built. Ordinary pickups update collected looks without rebuilding your clothing. Saving runs in the background; close the game normally to let outstanding saves finish.
 
 With Logging enabled, a completed page records its group, visible-entry and cached-image counts. Page construction is limited to two entries per continuation. Grouping uses saved icon references without loading preview textures for the full catalog.
@@ -56,4 +58,4 @@ Source is maintained at [my-mods/wardrobe-transmog](https://github.com/my-mods/w
 
 Credit to **RyroNZ**, author of [Dawnwalker Wardrobe (Transmog)](https://www.nexusmods.com/thebloodofdawnwalker/mods/237), for the original Wardrobe/transmog idea. **MIK**'s [Transmog - Your Look Your Choice](https://www.nexusmods.com/thebloodofdawnwalker/mods/353) also inspired the feature set.
 
-This mod is an independent implementation. **Not a single line of code from either author's mod was copied into this project.** Their DLLs and bundled assets are not included. Separately, this project uses the RE-UE4SS SDK, MinHook, fmt and the provided Mod Setting Menu integration helper; see [third-party notices](THIRD-PARTY-NOTICES.md).
+This mod is an independent implementation. **Not a single line of code from either author's mod was copied into this project.** Separately, this project uses the RE-UE4SS SDK, MinHook, fmt and the provided Mod Setting Menu integration helper; see [third-party notices](THIRD-PARTY-NOTICES.md).
