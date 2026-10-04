@@ -2,24 +2,10 @@
 
 ## 0.1.0
 
-- Change pages with D-pad Left / Right and show the matching key indicators beside Previous and Next.
-- Fix Wardrobe appearing at the end of the tab bar instead of beside Inventory.
-- List player appearances with icons first, then NPC appearances, alphabetically within each group; add group headings and keep Original/Hide at the front.
-- Place Wardrobe immediately after Inventory, including keyboard and controller tab navigation.
-- Match the inventory background, category size, key glyphs and equipment panel more closely; keep bottom actions inside the screen.
-- Navigate items with the left stick, including held movement and column-preserving page changes.
-- Switch day/night outfits with P or Start/Menu instead of Tab or View.
-- Replace the plain button layout with an inventory-style icon grid, game fonts and rarity frames, a large preview, and an outfit summary.
-- Add separate outfit dialogs, clear selection highlights and keyboard/controller action hints; scale the page to the available menu area.
-- Added a Wardrobe tab with a character preview and mouse, keyboard and controller controls.
-- Added separate day and night outfits, collected/all appearance filters and three outfit presets.
-- Added hide options for gauntlets, feet and the sheathed weapon.
-- Added configurable shortcuts and live Mod Setting Menu controls.
-- Keep the character preview in place when changing looks or saving outfits.
-- Avoid appearance rebuilds for ordinary pickups and unchanged outfit presets.
-- Save outfits in the background and spread catalog/menu work across frames.
-- Clarify armour, legwear, gloves/wristbands and footwear categories.
-- Fix a clothing-layout check that could prevent the Wardrobe from initializing.
-- Fix an initialization failure that could leave the tab and shortcut unavailable and repeatedly interrupt gameplay.
-- Fix Wardrobe tab detection and shortcut opening, including reopening the character menu; stop failed menu actions from retrying continuously.
-- Include the failed action in error messages to help diagnose missing game or menu functions.
+- Add a dedicated Wardrobe tab with an inventory-style grid, character preview and equipment slots.
+- Choose armour, legwear, gloves/wristbands, footwear and weapon appearances while keeping equipped stats.
+- Browse alphabetical Player Outfits first, followed by NPC Outfits, with group headings and collected/all-look filters.
+- Keep separate day and night outfits and save three reusable outfit presets.
+- Navigate items with the left stick, change pages with D-pad Left / Right, and use matching keyboard/controller prompts.
+- Hide supported slots, restore equipped appearances and configure the Wardrobe shortcut through Mod Setting Menu.
+- Keep the character preview in place while changing looks and save outfits in the background.

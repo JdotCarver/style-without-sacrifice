@@ -1,16 +1,7 @@
-- Choose your equipment's appearance from a dedicated Wardrobe tab.
-- Change pages with D-pad Left / Right and show the matching key indicators beside Previous and Next.
-- Fix Wardrobe appearing at the end of the tab bar instead of beside Inventory.
-- Browse alphabetical Player Outfits first, followed by NPC Outfits, with group headings and Original/Hide kept at the front.
-- Find Wardrobe immediately after Inventory, with smaller category symbols, native key glyphs, the inventory background and compact equipment slots.
-- Keep bottom actions fully visible, including on ultrawide screens.
-- Browse with the left stick and switch day/night outfits with P or Start/Menu.
-- Browse an inventory-style icon grid with game fonts, rarity frames, a large preview and an outfit summary.
-- Use separate outfit dialogs and keyboard/controller action hints in a layout that scales with the menu.
-- Save separate day and night looks and three outfit presets.
-- Browse with mouse, keyboard or controller and configure your shortcut in Mod Setting Menu.
-- Keep the preview in place while changing looks, and save outfits in the background.
-- Find wristbands and gauntlets together under Gloves / Wristbands.
-- Fix a clothing-layout check that could prevent the Wardrobe from initializing.
-- Fix an initialization failure that could leave the tab and shortcut unavailable and repeatedly interrupt gameplay.
-- Fix Wardrobe tab detection and shortcut opening, including reopening the character menu; stop failed menu actions from retrying continuously.
+- Add a dedicated Wardrobe tab with an inventory-style grid, character preview and equipment slots.
+- Choose armour, legwear, gloves/wristbands, footwear and weapon appearances while keeping equipped stats.
+- Browse alphabetical Player Outfits first, followed by NPC Outfits, with group headings and collected/all-look filters.
+- Keep separate day and night outfits and save three reusable outfit presets.
+- Navigate items with the left stick, change pages with D-pad Left / Right, and use matching keyboard/controller prompts.
+- Hide supported slots, restore equipped appearances and configure the Wardrobe shortcut through Mod Setting Menu.
+- Keep the character preview in place while changing looks and save outfits in the background.

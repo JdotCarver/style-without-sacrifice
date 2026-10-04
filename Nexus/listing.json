@@ -4,8 +4,31 @@
   "fileName": "Wardrobe-Transmog-Your-Equipment.zip",
   "game": "thebloodofdawnwalker",
   "requirements": [
-    {"name": "The Blood of Dawnwalker", "version": "1.0.5"},
-    {"name": "UE4SS", "notes": "C++ mod and native lifecycle/Blueprint callback support"},
-    {"name": "Mod Setting Menu", "version": "1.0.7.1 or later", "url": "https://www.nexusmods.com/thebloodofdawnwalker/mods/271"}
-  ]
+    {
+      "name": "The Blood of Dawnwalker",
+      "version": "1.0.5"
+    },
+    {
+      "name": "UE4SS",
+      "notes": "Dawnwalker-compatible UE4SS with C++ mod and native lifecycle/Blueprint callbacks; Vercadi RC6 is the current tested host. No version-name or whole-file-hash runtime restriction.",
+      "url": "https://www.nexusmods.com/thebloodofdawnwalker/mods/18"
+    },
+    {
+      "name": "Mod Setting Menu",
+      "version": "1.0.7.1 or later",
+      "url": "https://www.nexusmods.com/thebloodofdawnwalker/mods/271"
+    }
+  ],
+  "author": "oOCamilleOo (my-mods)",
+  "category": "User Interface",
+  "tags": [
+    "AI-Generated Content",
+    "AI Media",
+    "Quality of Life",
+    "English"
+  ],
+  "license": "MIT for the original implementation; retain included third-party notices",
+  "fileCategory": "main",
+  "allowModManagerDownload": true,
+  "primaryModManagerDownload": true
 }

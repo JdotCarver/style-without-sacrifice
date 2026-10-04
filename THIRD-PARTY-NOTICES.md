@@ -4,7 +4,9 @@ The native module uses the RE-UE4SS SDK, MinHook and fmt. Their licenses are inc
 
 ## Inspiration
 
-The supplied DawnwalkerWardrobe 1.1.4 and Transmog - Your Look Your Choice 0.9.3 packages informed the feature design and interface investigation. No code or assets from their compiled payloads are redistributed.
+RyroNZ's Dawnwalker Wardrobe (Transmog) inspired the original Wardrobe/transmog idea. MIK's Transmog - Your Look Your Choice also inspired the feature set. The supplied 1.1.4 and 0.9.3 packages informed feature design and interface investigation. This project was implemented independently: not a single line of code from either author's mod was copied. Their DLLs and bundled assets are not redistributed.
+
+The promotional banner and thumbnail use a gameplay screenshot supplied by oOCamilleOo. The Blood of Dawnwalker game imagery belongs to Rebel Wolves / Bandai Namco Entertainment and is not covered by this project's MIT license. See Nexus/artwork-credits.txt.
 
 Reference archive SHA-256 values:
 

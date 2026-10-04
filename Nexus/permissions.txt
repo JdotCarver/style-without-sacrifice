@@ -1,0 +1,5 @@
+Original implementation and documentation: MIT License, Copyright (c) 2026 my-mods. You may use, copy, modify, merge, publish, distribute, sublicense and sell the original code under the MIT terms, retaining its copyright and license notice. See LICENSE for the full terms.
+
+These permissions do not grant rights over either inspiration mod. RE-UE4SS, MinHook and fmt retain their included licenses. The unchanged Mod Setting Menu integration helper is included under its modder guide's copying permission; this does not grant rights over the rest of Mod Setting Menu.
+
+Promotional game imagery remains subject to Rebel Wolves' community-content guidelines: https://dawnwalkergame.com/us/en/community . It is not covered by the MIT license, and no commercial-use or Donation Points grant is made for third-party game imagery. This is unofficial community content.

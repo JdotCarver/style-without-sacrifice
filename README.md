@@ -54,4 +54,6 @@ Source is maintained at [my-mods/wardrobe-transmog](https://github.com/my-mods/w
 
 ## Inspiration
 
-[DawnwalkerWardrobe](https://www.nexusmods.com/thebloodofdawnwalker/mods/237) and [Transmog - Your Look Your Choice](https://www.nexusmods.com/thebloodofdawnwalker/mods/353) inspired the feature set. This project supplies its own implementation; their DLLs and bundled assets are not part of this package.
+Credit to **RyroNZ**, author of [Dawnwalker Wardrobe (Transmog)](https://www.nexusmods.com/thebloodofdawnwalker/mods/237), for the original Wardrobe/transmog idea. **MIK**'s [Transmog - Your Look Your Choice](https://www.nexusmods.com/thebloodofdawnwalker/mods/353) also inspired the feature set.
+
+This mod is an independent implementation. **Not a single line of code from either author's mod was copied into this project.** Their DLLs and bundled assets are not included. Separately, this project uses the RE-UE4SS SDK, MinHook, fmt and the provided Mod Setting Menu integration helper; see [third-party notices](THIRD-PARTY-NOTICES.md).
