@@ -14,7 +14,6 @@ Work injection;bool wantsOpen{},redraw{},built{};unsigned tileCursor{},popup{},f
 struct Button {Ref object,label;std::function<void()> click;};std::vector<Button> buttons;
 std::vector<Button> controls;
 struct Control {Ref parent;std::wstring caption;std::function<void()> click;};std::deque<Control> pendingControls;
-uint64_t previewRevision=~0ull;unsigned previewSet=2;
 std::vector<Look> filtered;std::vector<Choice> pageChoices;
 std::array<bool,256> previousKeys{};WORD previousPad{};BYTE previousLeft{},previousRight{};POINT previousMouse{};uint64_t xPressed{};
 bool pressed(int key){bool down=(GetAsyncKeyState(key)&0x8000)!=0;bool edge=down&&!previousKeys[key];previousKeys[key]=down;return edge;}
@@ -76,7 +75,7 @@ std::wstring choiceLabel(unsigned index){
 }
 void draw(){
     auto panel=grid.get();if(!panel)return;call(panel,L"ClearChildren");buttons.clear();tileCursor=0;rebuildList();
-    auto name=std::wstring(L"WARDROBE  /  ")+slotNames[runtime.model.category]+(runtime.model.displayedSet?L"  /  Night set":L"  /  Day set");setText(title.get(),L"SetText",name);
+    auto name=std::wstring(L"WARDROBE  /  ")+slotLabels[runtime.model.category]+(runtime.model.displayedSet?L"  /  Night set":L"  /  Day set");setText(title.get(),L"SetText",name);
     std::wstring info=runtime.catalogReady?(runtime.model.allLooks?L"All looks":L"Collected looks"):L"Loading looks...";
     info+=L"  |  Page "+std::to_wstring(runtime.model.page+1)+L"  |  A/D: category  |  Page Up/Down: page\nEnter/A: wear  |  F/L3: hide  |  Y/R3: all looks  |  T/X: save  |  S/Y: load\nR/hold X: reset set  |  Tab: day/night preview  |  Esc/B: close";
     if(popup)info=popup==1?L"Save current outfit: choose slot 1, 2 or 3. Escape cancels.":L"Load outfit: choose slot 1, 2 or 3. Escape cancels.";
@@ -88,7 +87,7 @@ void addTiles(){
     // Two tiles per frame: six widget allocations, never the entire catalog.
     for(unsigned n=0;n<2&&tileCursor<total;++n,++tileCursor){
         auto index=tileCursor;
-        if(popup){auto caption=L"Outfit "+std::to_wstring(index+1)+(runtime.model.presets[index]?L"  Saved":L"  Empty");button(panel,caption,[index]{bool change=popup==1?runtime.model.save(index):runtime.model.load(index);if(change){runtime.dirty=true;runtime.refreshWork.request(runtime.now);}popup=0;redraw=true;});}
+        if(popup){auto caption=L"Outfit "+std::to_wstring(index+1)+(runtime.model.presets[index]?L"  Saved":L"  Empty");button(panel,caption,[index]{bool saving=popup==1;bool change=saving?runtime.model.save(index):runtime.model.load(index);if(change){runtime.dirty=true;if(!saving)requestRefresh(runtime.model.displayedSet==runtime.activeSet,true);}popup=0;redraw=true;});}
         else {auto absolute=runtime.model.page*12+index;auto choice=pageChoices[absolute];button(panel,choiceLabel(absolute),[choice]{selectLook(static_cast<Slot>(runtime.model.category),choice);});}
     }
 }
@@ -98,14 +97,14 @@ void build(){
     title=Ref(label(vertical,L"WARDROBE",30));
     controls.clear();pendingControls.clear();
     auto categoryBar=widget(L"/Script/UMG.HorizontalBox");child(vertical,categoryBar);
-    for(unsigned i=0;i<5;++i)pendingControls.push_back({Ref(categoryBar),slotNames[i],[i]{runtime.model.category=i;runtime.model.page=0;popup=0;redraw=true;}});
+    for(unsigned i=0;i<5;++i)pendingControls.push_back({Ref(categoryBar),slotLabels[i],[i]{runtime.model.category=i;runtime.model.page=0;popup=0;redraw=true;}});
     auto actionBar=widget(L"/Script/UMG.HorizontalBox");child(vertical,actionBar);
     auto action=[&](const wchar_t* name,std::function<void()> click){pendingControls.push_back({Ref(actionBar),name,std::move(click)});};
-    action(L"Day / Night",[]{runtime.model.switchSet(1-runtime.model.displayedSet);redraw=true;});
+    action(L"Day / Night",[]{runtime.model.switchSet(1-runtime.model.displayedSet);requestRefresh(false,true);redraw=true;});
     action(L"Collected / All",[]{runtime.model.allLooks=!runtime.model.allLooks;runtime.dirty=true;runtime.model.page=0;redraw=true;});
     action(L"Hide",[]{selectLook(static_cast<Slot>(runtime.model.category),{Choice::Mode::Hidden,{}});});
     action(L"Save Outfit",[]{popup=1;redraw=true;});action(L"Load Outfit",[]{popup=2;redraw=true;});
-    action(L"Reset Set",[]{if(runtime.model.reset()){runtime.dirty=true;runtime.refreshWork.request(runtime.now);}popup=0;redraw=true;});
+    action(L"Reset Set",[]{if(runtime.model.reset()){runtime.dirty=true;requestRefresh(runtime.model.displayedSet==runtime.activeSet,true);}popup=0;redraw=true;});
     action(L"Close",[]{closeMenu();});
     auto horizontal=widget(L"/Script/UMG.HorizontalBox");fill(child(vertical,horizontal));
     auto left=sized(horizontal,900,440);auto wrap=widget(L"/Script/UMG.WrapBox");child(left,wrap);grid=Ref(wrap);
@@ -121,7 +120,7 @@ void show(){
     if(!page){page=Ref(createPage());if(!page)return;build();child(switcher,page.get());}
     Call select(switcher,L"SetActiveWidget");select.obj(L"Widget",page.get()).invoke();call(page.get(),L"ActivateWidget");
     if(auto nav=navbar.get()){Call selectTab(nav,L"SelectTab");if(selectTab){tag(selectTab.field(L"InTabTag"),selectTab.data(),tagName);selectTab.invoke();}}
-    runtime.menuOpen=true;runtime.model.switchSet(runtime.activeSet);wantsOpen=false;popup=0;redraw=true;beginCatalog();preview();previewRevision=runtime.model.revision;previewSet=runtime.model.displayedSet;
+    runtime.menuOpen=true;runtime.model.switchSet(runtime.activeSet);wantsOpen=false;popup=0;redraw=true;beginCatalog();preview();
     for(int i=0;i<256;++i)previousKeys[i]=(GetAsyncKeyState(i)&0x8000)!=0;
     XINPUT_STATE state{};previousPad=XInputGetState(0,&state)==ERROR_SUCCESS?state.Gamepad.wButtons:0;
 }
@@ -168,9 +167,11 @@ void stepMenu(){
     if(injection.ready(runtime.now)){auto ok=inject();injection.finish(ok,runtime.now);if(!ok&&!injection.pending){wantsOpen=false;warn(L"Wardrobe tab could not be added to this hub layout.");}}
     if(wantsOpen&&tabButton&&!injection.pending)show();
     if(!runtime.menuOpen)return;if(!page||!runtime.hub){runtime.menuOpen=false;stopPreview();resetMenu();return;}
-    if(previewRevision!=runtime.model.revision||previewSet!=runtime.model.displayedSet){stopPreview();preview();previewRevision=runtime.model.revision;previewSet=runtime.model.displayedSet;}
+    // Keep the same render doll for the entire visit. Appearance changes are
+    // applied in place; saving, collection learning and filtering do not spawn it.
+    if(redraw)draw();
     if(!pendingControls.empty()){for(unsigned i=0;i<2&&!pendingControls.empty();++i){auto control=std::move(pendingControls.front());pendingControls.pop_front();button(control.parent.get(),control.caption,std::move(control.click),true);}}
-    if(redraw)draw();addTiles();
+    else addTiles(); // One allocation budget shared by controls and choices.
     DWORD foreground{};GetWindowThreadProcessId(GetForegroundWindow(),&foreground);if(foreground!=GetCurrentProcessId())return;
     XINPUT_STATE state{};WORD pad{};BYTE left{},right{};if(XInputGetState(0,&state)==ERROR_SUCCESS){pad=state.Gamepad.wButtons;left=state.Gamepad.bLeftTrigger;right=state.Gamepad.bRightTrigger;}
     WORD edges=pad&~previousPad;
@@ -179,14 +180,14 @@ void stepMenu(){
     if(pressed('D')||(right>128&&previousRight<=128)){runtime.model.category=(runtime.model.category+1)%5;runtime.model.page=0;redraw=true;}
     if(pressed(VK_PRIOR)&&runtime.model.page){--runtime.model.page;redraw=true;}
     if(pressed(VK_NEXT)){++runtime.model.page;redraw=true;}
-    if(pressed(VK_TAB)||(edges&XINPUT_GAMEPAD_BACK)){runtime.model.switchSet(1-runtime.model.displayedSet);runtime.refreshWork.request(runtime.now);redraw=true;}
+    if(pressed(VK_TAB)||(edges&XINPUT_GAMEPAD_BACK)){runtime.model.switchSet(1-runtime.model.displayedSet);requestRefresh(false,true);redraw=true;}
     if(pressed('Y')||(edges&XINPUT_GAMEPAD_RIGHT_THUMB)){runtime.model.allLooks=!runtime.model.allLooks;runtime.dirty=true;runtime.model.page=0;redraw=true;}
     if(pressed('F')||(edges&XINPUT_GAMEPAD_LEFT_THUMB))selectLook(static_cast<Slot>(runtime.model.category),{Choice::Mode::Hidden,{}});
     if(pressed('T')){popup=1;redraw=true;}
     if(pressed('S')||(edges&XINPUT_GAMEPAD_Y)){popup=2;redraw=true;}
     if(edges&XINPUT_GAMEPAD_X)xPressed=runtime.now;
     bool heldReset=xPressed&&(pad&XINPUT_GAMEPAD_X)&&runtime.now-xPressed>=600;
-    if(pressed('R')||heldReset){if(runtime.model.reset()){runtime.dirty=true;runtime.refreshWork.request(runtime.now);}xPressed=0;popup=0;redraw=true;}
+    if(pressed('R')||heldReset){if(runtime.model.reset()){runtime.dirty=true;requestRefresh(runtime.model.displayedSet==runtime.activeSet,true);}xPressed=0;popup=0;redraw=true;}
     if(xPressed&&!(pad&XINPUT_GAMEPAD_X)){popup=1;redraw=true;xPressed=0;}
     if(pressed(VK_LEFT)||(edges&XINPUT_GAMEPAD_DPAD_LEFT))move(-1);
     if(pressed(VK_RIGHT)||(edges&XINPUT_GAMEPAD_DPAD_RIGHT))move(1);

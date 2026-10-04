@@ -22,9 +22,9 @@ void resetSession(){
     runtime.player={};runtime.controller={};runtime.inventory={};runtime.appearance={};runtime.doll={};runtime.dollAppearance={};runtime.hub={};pendingPlayer={};clearReflection();
 }
 void requestPlayer(UObject* pawn){if(pawn){pendingPlayer=Ref(pawn);runtime.attachWork.cancel();runtime.attachWork.request(runtime.now);}}
-void registerFunction(const wchar_t* path,std::function<void(UnrealScriptFunctionCallableContext&)> callback){
+void registerFunction(const wchar_t* path,std::function<void(UnrealScriptFunctionCallableContext&,UFunction*)> callback){
     auto fn=static_cast<UFunction*>(find(path));if(!fn){warn(std::wstring(L"Optional event unavailable: ")+path);return;}
-    try{auto ids=UObjectGlobals::RegisterHook(fn,{},[callback](UnrealScriptFunctionCallableContext& ctx,void*){if(active)callback(ctx);},nullptr);functionHooks.push_back({Ref(fn),ids});}
+    try{auto ids=UObjectGlobals::RegisterHook(fn,{},[callback,fn](UnrealScriptFunctionCallableContext& ctx,void*){if(active)callback(ctx,fn);},nullptr);functionHooks.push_back({Ref(fn),ids});}
     catch(...){warn(std::wstring(L"Could not register event: ")+path);}
 }
 void setup(){
@@ -57,10 +57,12 @@ void setup(){
         }
     },options));
     for(auto id:callbacks)if(id==Hook::ERROR_ID){warn(L"A required lifecycle hook could not be registered; restart with the required UE4SS native callback support.");stop();return;}
-    registerFunction(L"/Script/Engine.PlayerController:ClientRestart",[](auto& c){if(auto p=object(c.Context,L"AcknowledgedPawn"))requestPlayer(p);});
+    registerFunction(L"/Script/Engine.PlayerController:ClientRestart",[](auto& c,auto*){if(auto p=object(c.Context,L"AcknowledgedPawn"))requestPlayer(p);});
     for(auto name:{L"SetActiveLoadout",L"TryAddItem",L"TryAddAndEquipItem",L"TryEquipItem",L"TryEquipItemInSlot",L"UnequipItem",L"RequestItemUnequip"}){
         auto path=std::wstring(L"/Script/DogwoodInventory.InventoryComponent:")+name;
-        registerFunction(path.c_str(),[](auto& c){if(runtime.inventory.matches(c.Context)){inventoryChanged();}});
+        bool equipment=std::wstring_view(name)!=L"TryAddItem";
+        bool addition=std::wstring_view(name)==L"TryAddItem"||std::wstring_view(name)==L"TryAddAndEquipItem";
+        registerFunction(path.c_str(),[equipment,addition](auto& c,auto* fn){if(runtime.inventory.matches(c.Context)){if(addition)inventoryAdded(fn,c.TheStack.Locals());inventoryChanged(equipment);}});
     }
     // One startup fallback supports late loading. Later recovery is driven by
     // ClientRestart/BeginPlay or an explicit open request.
@@ -70,28 +72,37 @@ void setup(){
 void configure(Settings settings){std::lock_guard lock(settingsMutex);requested=settings;configured=true;}
 void requestOpen(){opening=true;}
 void tick(){
-    if(!active)return;++runtime.frame;runtime.now=GetTickCount64();
+    if(!active)return;++runtime.frame;
     bool requestedOpen=opening.exchange(false),apply=configured.exchange(false);
-    if(!requestedOpen&&!apply&&!hubQueued&&!runtime.attachWork.pending&&!runtime.refreshWork.pending&&!runtime.menuOpen&&!menuPending()&&!catalogPending()&&!runtime.dirty)return;
+    if(!requestedOpen&&!apply&&!hubQueued&&!runtime.attachWork.pending&&!runtime.refreshWork.pending&&!runtime.menuOpen&&!menuPending()&&!catalogPending()&&!inventoryPending()&&!storePending()&&!runtime.dirty)return;
+    runtime.now=GetTickCount64();
     auto started=logging?std::chrono::steady_clock::now():std::chrono::steady_clock::time_point{};
     try{
         if(hubQueued.exchange(false)){Ref h;{std::lock_guard lock(hubMutex);h=pendingHub;pendingHub={};}if(auto p=h.get())menuHub(p);}
-        if(apply){Settings s;{std::lock_guard lock(settingsMutex);s=requested;}bool changed=runtime.settings.enabled!=s.enabled;if(!logging&&s.debugLogging)started=std::chrono::steady_clock::now();runtime.settings=s;logging=s.debugLogging;if(changed){if(!s.enabled)closeMenu();runtime.refreshWork.request(runtime.now);}if(logging)trace(s.enabled?L"Settings applied: enabled.":L"Settings applied: disabled.");}
+        if(apply){Settings s;{std::lock_guard lock(settingsMutex);s=requested;}bool changed=runtime.settings.enabled!=s.enabled;if(!logging&&s.debugLogging)started=std::chrono::steady_clock::now();runtime.settings=s;logging=s.debugLogging;if(changed){if(!s.enabled)closeMenu();requestRefresh();}if(logging)trace(s.enabled?L"Settings applied: enabled.":L"Settings applied: disabled.");}
         if(runtime.player.address&&!runtime.player){resetSession();return;}
-        if(runtime.attachWork.ready(runtime.now)){bool ok=attach(pendingPlayer.get());runtime.attachWork.finish(ok,runtime.now);if(!ok&&!runtime.attachWork.pending)warn(L"Player appearance data is not ready; retrying on the next player event or Wardrobe open.");}
-        if(requestedOpen&&runtime.settings.enabled){
-            if(!runtime.player){if(auto pc=UObjectGlobals::FindFirstOf(L"PlayerController"))if(object(pc,L"Player"))attach(object(pc,L"AcknowledgedPawn"));}
-            if(runtime.menuOpen)closeMenu();else openMenu();
+        bool busy=false;
+        if(runtime.attachWork.ready(runtime.now)){bool ok=attach(pendingPlayer.get());busy=true;runtime.attachWork.finish(ok,runtime.now);if(!ok&&!runtime.attachWork.pending)warn(L"Player appearance data is not ready; retrying on the next player event or Wardrobe open.");}
+        if(requestedOpen&&busy)opening=true;
+        if(requestedOpen&&!busy&&runtime.settings.enabled){
+            if(!runtime.player){if(auto pc=UObjectGlobals::FindFirstOf(L"PlayerController"))if(object(pc,L"Player"))opening=attach(object(pc,L"AcknowledgedPawn"));}
+            else if(runtime.menuOpen)closeMenu();else openMenu();busy=true;
         }
-        if(runtime.refreshWork.ready(runtime.now))runtime.refreshWork.finish(refresh(),runtime.now);
-        if(catalogPending())stepCatalog();
-        if(runtime.menuOpen||menuPending())stepMenu();
+        // A refresh, inventory snapshot/slice, catalog slice or UI build gets
+        // its own frame. Do not add several independent budgets together.
+        if(!busy&&runtime.refreshWork.ready(runtime.now)){runtime.refreshWork.finish(refresh(),runtime.now);busy=true;}
+        bool ui=runtime.menuOpen||menuPending();
+        if(!busy&&ui&&runtime.frame%2==0){stepMenu();busy=true;}
+        if(!busy&&catalogPending()){stepCatalog();busy=true;}
+        if(!busy&&inventoryPending()){stepInventory();busy=true;}
+        if(!busy&&ui)stepMenu();
+        pollStore();
         if(runtime.dirty){if(!saveDue)saveDue=runtime.now+1500;if(runtime.now>=saveDue){writeStore();saveDue=0;}}else saveDue=0;
-        if(logging){runtime.workMicros+=std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-started).count();if(runtime.now-lastSummary>=10000){lastSummary=runtime.now;trace(L"Work totals: catalog steps="+std::to_wstring(runtime.catalogSteps)+L", refreshes="+std::to_wstring(runtime.refreshes)+L", clothing overrides="+std::to_wstring(runtime.nativeOverrides)+L", work us="+std::to_wstring(runtime.workMicros));}}
+        if(logging){auto elapsed=static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-started).count());runtime.workMicros+=elapsed;runtime.maxWorkMicros=std::max(runtime.maxWorkMicros,elapsed);if(runtime.now-lastSummary>=10000){lastSummary=runtime.now;trace(L"Work totals: catalog steps="+std::to_wstring(runtime.catalogSteps)+L", refreshes="+std::to_wstring(runtime.refreshes)+L", clothing overrides="+std::to_wstring(runtime.nativeOverrides)+L", inventory snapshots="+std::to_wstring(runtime.inventorySnapshots)+L", inventory entries="+std::to_wstring(runtime.inventoryItems)+L", work us="+std::to_wstring(runtime.workMicros)+L", max tick us="+std::to_wstring(runtime.maxWorkMicros));}}
     }catch(const std::exception&){warn(L"A required game/UI operation is unavailable; the current action was cancelled.");runtime.refreshWork.cancel();try{closeMenu();}catch(...){resetMenu();}}
 }
 void stop(){
-    if(!active)return;active=false;runtime.shuttingDown=true;writeStore();
+    if(!active)return;active=false;runtime.shuttingDown=true;writeStore();finishStore();
     // Teardown never invokes gameplay or UI functions from the loader thread.
     for(auto id:callbacks)Hook::UnregisterCallback(id);callbacks.clear();
     for(auto& hook:functionHooks)if(auto fn=static_cast<UFunction*>(hook.fn.get()))UObjectGlobals::UnregisterHook(fn,hook.ids);functionHooks.clear();

@@ -1,3 +1,6 @@
 - Choose your equipment's appearance from a dedicated Wardrobe tab.
 - Save separate day and night looks and three outfit presets.
 - Browse with mouse, keyboard or controller and configure your shortcut in Mod Setting Menu.
+- Keep the preview in place while changing looks, and save outfits in the background.
+- Find wristbands and gauntlets together under Gloves / Wristbands.
+- Fix a clothing-layout check that could prevent the Wardrobe from initializing.

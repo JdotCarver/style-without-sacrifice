@@ -2,7 +2,7 @@
 
 Choose how your equipment looks from a dedicated **Wardrobe** tab in The Blood of Dawnwalker. Your equipped items and their stats stay in place.
 
-Browse torso, legs, gauntlets, feet and weapon appearances. Switch between collected looks and the full appearance catalog, choose separate day and night outfits, and save three outfit presets. Gauntlets, feet and the sheathed weapon can be hidden. The drawn weapon remains visible.
+Browse armour, legwear, gloves/wristbands, footwear and weapon appearances. Wristbands and gauntlets share the **Gloves / Wristbands** category. Switch between collected looks and the full appearance catalog, choose separate day and night outfits, and save three outfit presets. Gauntlets, feet and the sheathed weapon can be hidden. The drawn weapon remains visible.
 
 Open Wardrobe with **End**, or select its tab in the character menu. The page includes a character preview, mouse controls, keyboard navigation and Xbox-style controller controls.
 
@@ -40,7 +40,9 @@ The mod creates `settings.ini` and `wardrobe.dat` inside `ue4ss/Mods/WardrobeTra
 
 Selecting **Original look** restores that slot's equipped appearance. **Reset Set** clears the displayed outfit. Presets store one complete outfit and can be loaded into either set.
 
-Logging defaults to Off. Turn it on in Mod Setting Menu to record aggregate catalog, refresh and appearance-override counts and work timings in `Dawnwalker/Binaries/Win64/ue4ss/UE4SS.log`. Operational failures are reported once per distinct message, even when detailed logging is off.
+The character preview stays in place while you change looks or save outfits. Ordinary pickups update collected looks without rebuilding your clothing. Saving runs in the background; close the game normally to let outstanding saves finish.
+
+Logging defaults to Off. Turn it on in Mod Setting Menu to record aggregate catalog, inventory, refresh and appearance-override counts, total work time, and the longest active mod tick in `Dawnwalker/Binaries/Win64/ue4ss/UE4SS.log`. Operational failures are reported once per distinct message, even when detailed logging is off.
 
 ## Source
 

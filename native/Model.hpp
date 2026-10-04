@@ -11,6 +11,7 @@ namespace Wardrobe {
 enum class Slot : unsigned { Torso, Legs, Gauntlets, Feet, Weapon, Count };
 constexpr size_t slotCount=static_cast<size_t>(Slot::Count);
 inline constexpr const wchar_t* slotNames[]={L"Torso",L"Legs",L"Gauntlets",L"Feet",L"Weapon"};
+inline constexpr const wchar_t* slotLabels[]={L"Armour",L"Legwear",L"Gloves / Wristbands",L"Footwear",L"Weapons"};
 inline bool hideAllowed(Slot s){return s==Slot::Gauntlets||s==Slot::Feet||s==Slot::Weapon;}
 struct Choice {
     enum class Mode { Original, Look, Hidden } mode{};
@@ -34,10 +35,10 @@ struct Model {
         sets[displayedSet][index]=std::move(choice);++revision;return true;
     }
     bool reset(){if(sets[displayedSet]==Outfit{})return false;sets[displayedSet]={};++revision;return true;}
-    bool save(unsigned i){if(i>=presets.size())return false;presets[i]=sets[displayedSet];++revision;return true;}
-    bool load(unsigned i){if(i>=presets.size()||!presets[i])return false;sets[displayedSet]=*presets[i];++revision;return true;}
+    bool save(unsigned i){if(i>=presets.size()||presets[i]==sets[displayedSet])return false;presets[i]=sets[displayedSet];return true;}
+    bool load(unsigned i){if(i>=presets.size()||!presets[i]||sets[displayedSet]==*presets[i])return false;sets[displayedSet]=*presets[i];++revision;return true;}
     void switchSet(unsigned i){displayedSet=std::min(i,1u);page=selected=0;}
-    bool learn(const std::wstring& key){if(key.empty()||key.size()>512||collected.size()>=16384)return false;if(!collected.insert(key).second)return false;++revision;return true;}
+    bool learn(const std::wstring& key){if(key.empty()||key.size()>512||collected.size()>=16384)return false;return collected.insert(key).second;}
 };
 struct Settings {bool enabled=true;bool debugLogging=false;unsigned openKey=0;};
 // An event burst coalesces into one bounded continuation; no retry work remains
