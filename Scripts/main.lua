@@ -1,4 +1,4 @@
--- Wardrobe - Transmog Your Equipment. MIT.
+-- Style Without Sacrifice - Your Transmogrification Wardrobe. MIT.
 local Settings=require("Settings")
 local source=debug.getinfo(1,"S").source:gsub("^@","")
 local root=assert(source:match("^(.*[/\\])Scripts[/\\][^/\\]+$"),"Cannot locate mod directory")

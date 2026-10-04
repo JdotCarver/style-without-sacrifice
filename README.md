@@ -1,4 +1,4 @@
-# Wardrobe - Transmog Your Equipment
+# Style Without Sacrifice - Your Transmogrification Wardrobe
 
 Choose how your equipment looks from a dedicated **Wardrobe** tab in The Blood of Dawnwalker. Your equipped items and their stats stay in place.
 
@@ -8,7 +8,7 @@ Open Wardrobe with **End**, or select its tab immediately after **Inventory** in
 
 ## Installation
 
-- **Vortex:** Install `Wardrobe-Transmog-Your-Equipment.zip` through Vortex, enable it and deploy.
+- **Vortex:** Install `Style-Without-Sacrifice.zip` through Vortex, enable it and deploy.
 - **Manual:** Copy `Data/WardrobeTransmog` into `The Blood of Dawnwalker/Dawnwalker/Binaries/Win64/ue4ss/Mods`, preserving the folder structure.
 
 ## Dependencies
@@ -52,7 +52,7 @@ Logging defaults to Off. Turn it on in Mod Setting Menu to record player attachm
 
 ## Source
 
-Source is maintained at [my-mods/wardrobe-transmog](https://github.com/my-mods/wardrobe-transmog). See [BUILD.md](BUILD.md) for the pinned SDK and build steps.
+Source is maintained at [my-mods/style-without-sacrifice](https://github.com/my-mods/style-without-sacrifice). See [BUILD.md](BUILD.md) for the pinned SDK and build steps.
 
 ## Inspiration
 

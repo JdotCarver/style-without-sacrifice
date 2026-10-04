@@ -1,7 +1,7 @@
 {
-  "name": "Wardrobe - Transmog Your Equipment",
+  "name": "Style Without Sacrifice - Your Transmogrification Wardrobe",
   "version": "0.1.0",
-  "fileName": "Wardrobe-Transmog-Your-Equipment.zip",
+  "fileName": "Style-Without-Sacrifice.zip",
   "game": "thebloodofdawnwalker",
   "requirements": [
     {
@@ -30,5 +30,6 @@
   "license": "MIT for the original implementation; retain included third-party notices",
   "fileCategory": "main",
   "allowModManagerDownload": true,
-  "primaryModManagerDownload": true
+  "primaryModManagerDownload": true,
+  "fileDisplayName": "Style Without Sacrifice"
 }

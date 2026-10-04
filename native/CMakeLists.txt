@@ -46,6 +46,6 @@ install(FILES ../Nexus/description.bbcode ../Nexus/summary.txt ../Nexus/file-des
 install(FILES ../Nexus/banner.jpg ../Nexus/thumbnail.jpg ../Nexus/artwork-credits.txt ../Nexus/permissions.txt DESTINATION Nexus)
 set(CPACK_GENERATOR ZIP)
 set(CPACK_PACKAGE_VERSION "0.1.0")
-set(CPACK_PACKAGE_FILE_NAME "Wardrobe-Transmog-Your-Equipment")
+set(CPACK_PACKAGE_FILE_NAME "Style-Without-Sacrifice")
 set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF)
 include(CPack)

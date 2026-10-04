@@ -1,4 +1,4 @@
--- Wardrobe - Transmog Your Equipment. MIT.
+-- Style Without Sacrifice - Your Transmogrification Wardrobe. MIT.
 local M = {}
 M.order = {"enabled", "openKey", "debugLogging"}
 M.rules = {enabled={1,0,1}, openKey={0,0,3}, debugLogging={0,0,1}}
