@@ -11,3 +11,6 @@
 - Save outfits in the background and spread catalog/menu work across frames.
 - Clarify armour, legwear, gloves/wristbands and footwear categories.
 - Fix a clothing-layout check that could prevent the Wardrobe from initializing.
+- Fix an initialization failure that could leave the tab and shortcut unavailable and repeatedly interrupt gameplay.
+- Restore the Wardrobe page when reopening the character menu and stop failed menu actions from retrying continuously.
+- Include the failed action in error messages to help diagnose missing game or menu functions.

@@ -21,4 +21,6 @@ The clothing hook identifies the specific accessor's instructions in executable 
 
 Catalog processing is incremental; appearance work follows inventory and player events. The native UI is built from the game's loaded widget classes. Game assets are loaded from the installed game and are not redistributed.
 
+Hard object parameters use the property's copy operation. The SDK's legacy `SetObjectPropertyValue` wrapper has no mapping in its UE5.5 virtual table definitions, even when the host exports the wrapper. The Wardrobe page is a native panel in the existing hub widget tree; hub activation and tab rebuilding drive its setup. Attachment exceptions consume the same finite retry budget as missing data, and other failed actions cancel their pending work.
+
 The source license is MIT. Preserve the bundled dependency notices when distributing binaries. The UE4SS SDK's MIT license is included under `LICENSES`.

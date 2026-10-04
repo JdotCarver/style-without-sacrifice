@@ -144,12 +144,13 @@ bool startCosmetics(){
     started=true;return true;
 }
 void stopCosmetics(){started=false;if(rowTarget){MH_DisableHook(rowTarget);MH_RemoveHook(rowTarget);rowTarget=nullptr;}resetCosmetics();}
-void resetCosmetics(){meshEdits={};preparedChoices={};inventoryDirty=true;inventorySnapshot.reset();inventorySystem={};addedItems.clear();inventoryCursor=0;inventoryDue=0;runtime.playerRefresh=runtime.previewRefresh=false;for(auto& set:overrides)for(auto& row:set)row.reset();subsystem={};clothingTable={};weaponTable={};rowType={};weaponType={};slotProperty=nullptr;weapons={};weaponMesh={};scabbardMesh={};catalogStarted=false;runtime.catalogReady=false;runtime.looks.clear();itemLookup.clear();lastLoadoutFrame=~0ull;}
+void resetCosmetics(){meshEdits={};preparedChoices={};inventoryDirty=true;inventorySnapshot.reset();inventorySystem={};addedItems.clear();inventoryCursor=0;inventoryDue=0;runtime.playerRefresh=runtime.previewRefresh=false;for(auto& set:overrides)for(auto& row:set)row.reset();subsystem={};clothingTable={};weaponTable={};rowType={};weaponType={};slotProperty=nullptr;weapons={};weaponMesh={};scabbardMesh={};catalogStarted=false;runtime.catalogReady=runtime.playerReady=false;runtime.looks.clear();itemLookup.clear();lastLoadoutFrame=~0ull;}
+void cancelCosmeticWork(){catalogStarted=false;inventoryDirty=false;addedItems.clear();inventorySnapshot.reset();runtime.refreshWork.cancel();runtime.playerRefresh=runtime.previewRefresh=false;}
 bool attach(UObject* pawn){
     if(!pawn)return false;auto controller=object(pawn,L"Controller");if(!controller||!object(controller,L"Player"))return false;
     auto inv=object(pawn,L"InventoryComponent"),app=object(pawn,L"AppearanceComponent");if(!inv||!app)return false;
     if(!runtime.player.matches(pawn)){resetCosmetics();runtime.player=Ref(pawn);runtime.controller=Ref(controller);runtime.inventory=Ref(inv);runtime.appearance=Ref(app);runtime.doll={};runtime.dollAppearance={};}
-    if(!tables(pawn))return false;beginCatalog();runtime.activeSet=loadout();runtime.model.switchSet(runtime.activeSet);requestRefresh();if(logging)trace(L"Attached player: "+pawn->GetName());return true;
+    if(!tables(pawn))return false;beginCatalog();runtime.activeSet=loadout();runtime.model.switchSet(runtime.activeSet);runtime.playerReady=true;requestRefresh();if(logging)trace(L"Attached player: "+pawn->GetName());return true;
 }
 void beginCatalog(){if(catalogStarted||!clothingTable)return;catalogStarted=true;tablePhase=tableCursor=0;expectedRows=table(false)->GetRowMap().Num();runtime.looks.clear();itemLookup.clear();runtime.catalogReady=false;}
 bool stepCatalog(){

@@ -67,7 +67,6 @@ EXPORTS
     ?GetUnderlyingProp@FEnumProperty@Unreal@RC@@QEAAAEAPEAVFNumericProperty@23@XZ
     ?HasAllCastFlags@UClass@Unreal@RC@@QEBA_NW4EClassCastFlags@23@@Z
     ?HasAllPropertyFlags@FProperty@Unreal@RC@@QEAA_NW4EPropertyFlags@23@@Z
-    ?HasAnyFlags@UObject@Unreal@RC@@QEAA_NW4EObjectFlags@23@@Z
     ?ImportText_Direct@FProperty@Unreal@RC@@QEBAPEB_WPEB_WPEAXPEAVUObject@23@HPEAVFOutputDevice@23@@Z
     ?IndexToObject@FUObjectArray@Unreal@RC@@SAPEAUFUObjectItem@23@H@Z
     ?InitializeStruct@UStruct@Unreal@RC@@QEBAXPEAXH@Z
@@ -87,17 +86,16 @@ EXPORTS
     ?RegisterHook@UObjectGlobals@Unreal@RC@@YA?AU?$pair@HH@std@@PEAVUFunction@23@V?$function@$$A6AXAEAVUnrealScriptFunctionCallableContext@Unreal@RC@@PEAX@Z@5@1PEAX@Z
     ?RegisterProcessLocalScriptFunctionPostCallback@Hook@Unreal@RC@@YA_KV?$function@$$A6AXAEAV?$TCallbackIterationData@X@Hook@Unreal@RC@@PEAVUObject@34@AEAUFFrame@34@PEAX@Z@std@@UFCallbackOptions@123@@Z
     ?RegisterProcessLocalScriptFunctionPreCallback@Hook@Unreal@RC@@YA_KV?$function@$$A6AXAEAV?$TCallbackIterationData@X@Hook@Unreal@RC@@PEAVUObject@34@AEAUFFrame@34@PEAX@Z@std@@UFCallbackOptions@123@@Z
-    ?RegisterStaticConstructObjectPostCallback@Hook@Unreal@RC@@YA_KV?$function@$$A6AXAEAV?$TCallbackIterationData@PEAVUObject@Unreal@RC@@@Hook@Unreal@RC@@AEBUFStaticConstructObjectParameters@34@@Z@std@@UFCallbackOptions@123@@Z
     ?RemoveUObjectDeleteListener@FUObjectArray@Unreal@RC@@SAXPEAVFUObjectDeleteListener@23@@Z
     ?SetFloatingPointPropertyValue@FNumericProperty@Unreal@RC@@QEAAXPEAXN@Z
     ?SetIntPropertyValue@FNumericProperty@Unreal@RC@@QEBAXPEAX_J@Z
-    ?SetObjectPropertyValue@FObjectPropertyBase@Unreal@RC@@QEBAXPEAXPEAVUObject@23@@Z
     ?StaticClass@FArrayProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FBoolProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FByteProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FEnumProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FNameProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FNumericProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
+    ?StaticClass@FObjectProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FObjectPropertyBase@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FSoftObjectProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FStrProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ

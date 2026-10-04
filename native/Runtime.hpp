@@ -12,7 +12,7 @@ struct Runtime {
     Ref player,controller,inventory,appearance,doll,dollAppearance,hub;
     Work attachWork,refreshWork;uint64_t frame{},now{};
     bool playerRefresh{},previewRefresh{};
-    bool menuOpen{},catalogReady{},dirty{},shuttingDown{},persistenceBlocked{};
+    bool menuOpen{},catalogReady{},playerReady{},dirty{},shuttingDown{},persistenceBlocked{};
     unsigned activeSet{};
     std::vector<Look> looks;
     uint64_t catalogSteps{},refreshes{},nativeOverrides{},workMicros{},maxWorkMicros{},inventorySnapshots{},inventoryItems{};
@@ -31,5 +31,7 @@ void menuRedraw();
 bool menuPending();bool catalogPending();void inventoryChanged(bool equipment=false);
 void requestRefresh(bool player=true,bool preview=true);bool inventoryPending();void stepInventory();
 void inventoryAdded(UFunction*,void*);
+void cancelCosmeticWork();
 void configure(Settings);void requestOpen();void tick();void stop();
+void queueHub(UObject*);
 }

@@ -52,5 +52,6 @@ void call(UObject*,const wchar_t*);
 void setNumber(UObject*,const wchar_t*,const wchar_t*,double);
 void setText(UObject*,const wchar_t*,const std::wstring&);
 void warn(const std::wstring&);void trace(const std::wstring&);
+void failure(const wchar_t*,const std::exception&);
 extern bool logging;
 }

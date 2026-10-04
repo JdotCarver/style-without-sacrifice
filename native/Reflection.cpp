@@ -32,6 +32,10 @@ std::set<std::wstring> warnings;
 }
 void warn(const std::wstring& s){if(warnings.size()<64&&warnings.insert(s).second)RC::Output::send(L"[WardrobeTransmog] "+s+L"\n");}
 void trace(const std::wstring& s){if(logging)RC::Output::send(L"[WardrobeTransmog] "+s+L"\n");}
+void failure(const wchar_t* action,const std::exception& error){
+    std::wstring detail;for(auto p=error.what();*p&&detail.size()<384;++p)detail.push_back(static_cast<unsigned char>(*p));
+    warn(std::wstring(action)+L": "+detail);
+}
 void initializeReferences(){if(!alive.exchange(true))FUObjectArray::AddUObjectDeleteListener(&listener);}
 void shutdownReferences(){if(alive.exchange(false))FUObjectArray::RemoveUObjectDeleteListener(&listener);std::lock_guard lock(lifeMutex);for(auto& [index,value]:lives)if(auto life=value.lock())life->alive=false;lives.clear();}
 void clearReflection(){fields.clear();functions.clear();warnings.clear();}
@@ -76,8 +80,10 @@ UObject* readObject(FProperty* p,void* base){
     return static_cast<FObjectPropertyBase*>(p)->GetObjectPropertyValue(p->ContainerPtrToValuePtr<void>(base));
 }
 void assignObject(FProperty* p,void* base,UObject* value){
-    if(!p||!p->IsA<FObjectPropertyBase>())throw std::runtime_error("Expected object property");
-    static_cast<FObjectPropertyBase*>(p)->SetObjectPropertyValue(p->ContainerPtrToValuePtr<void>(base),value);
+    if(!p||!base||!p->IsA<FObjectProperty>()||p->GetSize()!=sizeof(value))throw std::runtime_error("Expected one hard object reference");
+    // UE5.5 no longer maps the legacy SetObjectPropertyValue virtual wrapper.
+    // The engine's object-property copy handles TObjectPtr ownership/barriers.
+    p->CopyCompleteValue(p->ContainerPtrToValuePtr<void>(base),&value);
 }
 UObject* object(UObject* p,const wchar_t* name){return readObject(property(p,name),p);}
 int64_t integer(FProperty* p,void* base){

@@ -15,13 +15,15 @@ std::atomic_bool opening{};std::atomic_bool configured{};
 std::mutex settingsMutex;Settings requested;
 Ref pendingPlayer,pendingHub;std::atomic_bool active{},hubQueued{};std::mutex hubMutex;uint64_t lastSummary{},saveDue{};
 Ref weaponClass,pawnClass;
+bool openAfterAttach{};
 std::vector<Hook::GlobalCallbackId> callbacks;
 struct FunctionHook {Ref fn;std::pair<int,int> ids;};std::vector<FunctionHook> functionHooks;
 void resetSession(){
+    openAfterAttach=false;
     closeMenu();resetMenu();runtime.attachWork.cancel();runtime.refreshWork.cancel();resetCosmetics();
     runtime.player={};runtime.controller={};runtime.inventory={};runtime.appearance={};runtime.doll={};runtime.dollAppearance={};runtime.hub={};pendingPlayer={};clearReflection();
 }
-void requestPlayer(UObject* pawn){if(pawn){pendingPlayer=Ref(pawn);runtime.attachWork.cancel();runtime.attachWork.request(runtime.now);}}
+void requestPlayer(UObject* pawn){if(pawn){if(runtime.attachWork.pending&&pendingPlayer.matches(pawn))return;pendingPlayer=Ref(pawn);runtime.attachWork.cancel();runtime.attachWork.request(runtime.now);}}
 void registerFunction(const wchar_t* path,std::function<void(UnrealScriptFunctionCallableContext&,UFunction*)> callback){
     auto fn=static_cast<UFunction*>(find(path));if(!fn){warn(std::wstring(L"Optional event unavailable: ")+path);return;}
     try{auto ids=UObjectGlobals::RegisterHook(fn,{},[callback,fn](UnrealScriptFunctionCallableContext& ctx,void*){if(active)callback(ctx,fn);},nullptr);functionHooks.push_back({Ref(fn),ids});}
@@ -47,16 +49,13 @@ void setup(){
     options.HookName=L"Wardrobe hub selection";
     callbacks.push_back(Hook::RegisterProcessLocalScriptFunctionPreCallback([](auto& info,UObject* owner,FFrame& frame,void*){if(active)menuScriptPre(owner,frame.Node(),frame.Locals(),info);},options));
     callbacks.push_back(Hook::RegisterProcessLocalScriptFunctionPostCallback([](auto&,UObject* owner,FFrame& frame,void*){if(active)menuScriptPost(owner,frame.Node(),frame.Locals());},options));
-    options.HookName=L"Hub construction";
-    callbacks.push_back(Hook::RegisterStaticConstructObjectPostCallback([](auto& info,const FStaticConstructObjectParameters& args){
-        auto created=info.GetOriginalFunctionCallResult();
-        if(!active||!created||!args.Class)return;
-        static const FName hubName(L"WBP_Window_GameHub_C");
-        if(args.Class->GetFName()==hubName&&!created->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject|RF_ArchetypeObject))){
-            std::lock_guard lock(hubMutex);pendingHub=Ref(created);hubQueued=true;
-        }
-    },options));
     for(auto id:callbacks)if(id==Hook::ERROR_ID){warn(L"A required lifecycle hook could not be registered; restart with the required UE4SS native callback support.");stop();return;}
+    // Activation fires after the widget tree exists, including pooled hubs.
+    // There is no Wardrobe callback on every UObject construction.
+    registerFunction(L"/Script/CommonUI.CommonActivatableWidget:ActivateWidget",[](auto& c,auto*){
+        static const FName hubName(L"WBP_Window_GameHub_C");auto h=c.Context;
+        if(h&&h->GetClassPrivate()->GetFName()==hubName)queueHub(h);
+    });
     registerFunction(L"/Script/Engine.PlayerController:ClientRestart",[](auto& c,auto*){if(auto p=object(c.Context,L"AcknowledgedPawn"))requestPlayer(p);});
     for(auto name:{L"SetActiveLoadout",L"TryAddItem",L"TryAddAndEquipItem",L"TryEquipItem",L"TryEquipItemInSlot",L"UnequipItem",L"RequestItemUnequip"}){
         auto path=std::wstring(L"/Script/DogwoodInventory.InventoryComponent:")+name;
@@ -71,35 +70,49 @@ void setup(){
 }
 void configure(Settings settings){std::lock_guard lock(settingsMutex);requested=settings;configured=true;}
 void requestOpen(){opening=true;}
+void queueHub(UObject* h){std::lock_guard lock(hubMutex);pendingHub=Ref(h);hubQueued=true;}
 void tick(){
     if(!active)return;++runtime.frame;
     bool requestedOpen=opening.exchange(false),apply=configured.exchange(false);
     if(!requestedOpen&&!apply&&!hubQueued&&!runtime.attachWork.pending&&!runtime.refreshWork.pending&&!runtime.menuOpen&&!menuPending()&&!catalogPending()&&!inventoryPending()&&!storePending()&&!runtime.dirty)return;
     runtime.now=GetTickCount64();
     auto started=logging?std::chrono::steady_clock::now():std::chrono::steady_clock::time_point{};
+    const wchar_t* operation=L"Event processing";
     try{
         if(hubQueued.exchange(false)){Ref h;{std::lock_guard lock(hubMutex);h=pendingHub;pendingHub={};}if(auto p=h.get())menuHub(p);}
         if(apply){Settings s;{std::lock_guard lock(settingsMutex);s=requested;}bool changed=runtime.settings.enabled!=s.enabled;if(!logging&&s.debugLogging)started=std::chrono::steady_clock::now();runtime.settings=s;logging=s.debugLogging;if(changed){if(!s.enabled)closeMenu();requestRefresh();}if(logging)trace(s.enabled?L"Settings applied: enabled.":L"Settings applied: disabled.");}
         if(runtime.player.address&&!runtime.player){resetSession();return;}
         bool busy=false;
-        if(runtime.attachWork.ready(runtime.now)){bool ok=attach(pendingPlayer.get());busy=true;runtime.attachWork.finish(ok,runtime.now);if(!ok&&!runtime.attachWork.pending)warn(L"Player appearance data is not ready; retrying on the next player event or Wardrobe open.");}
-        if(requestedOpen&&busy)opening=true;
+        if(runtime.attachWork.ready(runtime.now)){
+            operation=L"Player attachment";bool ok=false;busy=true;
+            try{ok=attach(pendingPlayer.get());}catch(const std::exception& e){failure(operation,e);}
+            runtime.attachWork.finish(ok,runtime.now);
+            if(ok&&openAfterAttach){opening=true;openAfterAttach=false;}
+            if(!ok&&!runtime.attachWork.pending){openAfterAttach=false;opening=false;warn(L"Player attachment stopped after 12 attempts; a player event or Wardrobe shortcut can retry.");}
+        }
+        if(requestedOpen&&busy&&(runtime.attachWork.pending||runtime.playerReady))opening=true;
         if(requestedOpen&&!busy&&runtime.settings.enabled){
-            if(!runtime.player){if(auto pc=UObjectGlobals::FindFirstOf(L"PlayerController"))if(object(pc,L"Player"))opening=attach(object(pc,L"AcknowledgedPawn"));}
-            else if(runtime.menuOpen)closeMenu();else openMenu();busy=true;
+            operation=L"Wardrobe open";
+            if(!runtime.playerReady){
+                openAfterAttach=true;
+                if(!runtime.attachWork.pending){auto pawn=runtime.player.get();if(!pawn)if(auto pc=UObjectGlobals::FindFirstOf(L"PlayerController"))if(object(pc,L"Player"))pawn=object(pc,L"AcknowledgedPawn");requestPlayer(pawn);}
+            }else if(runtime.menuOpen)closeMenu();else openMenu();busy=true;
         }
         // A refresh, inventory snapshot/slice, catalog slice or UI build gets
         // its own frame. Do not add several independent budgets together.
-        if(!busy&&runtime.refreshWork.ready(runtime.now)){runtime.refreshWork.finish(refresh(),runtime.now);busy=true;}
+        if(!busy&&runtime.refreshWork.ready(runtime.now)){operation=L"Appearance refresh";runtime.refreshWork.finish(refresh(),runtime.now);busy=true;}
         bool ui=runtime.menuOpen||menuPending();
-        if(!busy&&ui&&runtime.frame%2==0){stepMenu();busy=true;}
-        if(!busy&&catalogPending()){stepCatalog();busy=true;}
-        if(!busy&&inventoryPending()){stepInventory();busy=true;}
-        if(!busy&&ui)stepMenu();
+        if(!busy&&ui&&runtime.frame%2==0){operation=L"Wardrobe menu";stepMenu();busy=true;}
+        if(!busy&&catalogPending()){operation=L"Appearance catalog";stepCatalog();busy=true;}
+        if(!busy&&inventoryPending()){operation=L"Collection update";stepInventory();busy=true;}
+        if(!busy&&ui){operation=L"Wardrobe menu";stepMenu();}
         pollStore();
         if(runtime.dirty){if(!saveDue)saveDue=runtime.now+1500;if(runtime.now>=saveDue){writeStore();saveDue=0;}}else saveDue=0;
         if(logging){auto elapsed=static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-started).count());runtime.workMicros+=elapsed;runtime.maxWorkMicros=std::max(runtime.maxWorkMicros,elapsed);if(runtime.now-lastSummary>=10000){lastSummary=runtime.now;trace(L"Work totals: catalog steps="+std::to_wstring(runtime.catalogSteps)+L", refreshes="+std::to_wstring(runtime.refreshes)+L", clothing overrides="+std::to_wstring(runtime.nativeOverrides)+L", inventory snapshots="+std::to_wstring(runtime.inventorySnapshots)+L", inventory entries="+std::to_wstring(runtime.inventoryItems)+L", work us="+std::to_wstring(runtime.workMicros)+L", max tick us="+std::to_wstring(runtime.maxWorkMicros));}}
-    }catch(const std::exception&){warn(L"A required game/UI operation is unavailable; the current action was cancelled.");runtime.refreshWork.cancel();try{closeMenu();}catch(...){resetMenu();}}
+    }catch(const std::exception& e){
+        failure(operation,e);opening=false;openAfterAttach=false;runtime.attachWork.cancel();cancelCosmeticWork();
+        try{closeMenu();}catch(const std::exception& closeError){failure(L"Closing failed menu",closeError);}resetMenu();
+    }
 }
 void stop(){
     if(!active)return;active=false;runtime.shuttingDown=true;writeStore();finishStore();
