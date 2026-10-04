@@ -39,6 +39,12 @@ std::array<bool,256> keyEdges{};
 StickNavigation stick;
 bool pressed(int key){return keyEdges[key];}
 void pollKeys(){for(int key:std::initializer_list<int>{VK_ESCAPE,'A','D',VK_PRIOR,VK_NEXT,'P','Y','F','T','S','R',VK_LEFT,VK_RIGHT,VK_UP,VK_DOWN,VK_LBUTTON,VK_RETURN}){bool down=(GetAsyncKeyState(key)&0x8000)!=0;keyEdges[key]=down&&!previousKeys[key];previousKeys[key]=down;if(keyEdges[key]&&controllerInput){controllerInput=false;paintHints=true;}}}
+void changePage(int direction){
+    if(popup)return;
+    if(direction<0){if(!runtime.model.page)return;--runtime.model.page;}
+    else {if(runtime.model.page+1>=catalogPages.size())return;++runtime.model.page;}
+    nextFocus=0;redraw=true;
+}
 void tag(FProperty* p,void* base,const wchar_t* text){
     if(!p||!p->IsA<FStructProperty>())throw std::runtime_error("Expected gameplay tag");auto st=static_cast<FStructProperty*>(p)->GetStruct();auto field=property(st,L"TagName");assignText(field,p->ContainerPtrToValuePtr<void>(base),text);
 }
@@ -126,6 +132,8 @@ void inputHints(){
         case 16:value=L"Hide slot";key=L"F";pad=L"L_Press";break;
         case 17:key=L"A";pad=L"LT";break;
         case 18:key=L"D";pad=L"RT";break;
+        case 19:value=L"Previous";key=L"PgUp";pad=L"Dpad_Left";break;
+        case 20:value=L"Next";key=L"PgDn";pad=L"Dpad_Right";break;
         case 100:value=L"Cancel";key=L"Esc";pad=L"B";break;
         }
         if(value&&c.label)setText(c.label.get(),L"SetText",value);
@@ -224,8 +232,8 @@ void build(){
     for(unsigned i=0;i<5;++i){auto r=Layout::equipment(i);summaryFills[i]=Ref(image(stage,nullptr,r));image(stage,gridFrame.get(),r);summaryImages[i]=Ref(image(stage,categoryIcons[i].get(),{r.x+8,r.y+8,r.w-16,r.h-16}));summaryFrames[i]=Ref(image(stage,activeFrame.get(),r,UI::gold));}
     summaryTitle=Ref(label(stage,L"Armour",{1600,492,296,64},18,UI::muted));
     summaryChoice=Ref(label(stage,L"Original look",{1600,564,296,164},20));
-    action(L"<  Previous",Layout::pagePrevious,[]{if(runtime.model.page){--runtime.model.page;redraw=true;}});
-    action(L"Next  >",Layout::pageNext,[]{if(runtime.model.page+1<catalogPages.size()){++runtime.model.page;redraw=true;}});
+    action(L"Previous",Layout::pagePrevious,[]{changePage(-1);},19);
+    action(L"Next",Layout::pageNext,[]{changePage(1);},20);
     action(L"Back",Layout::prompts[0],[]{closeMenu();},15);
     action(L"Hide slot",Layout::prompts[1],[]{selectLook(static_cast<Slot>(runtime.model.category),{Choice::Mode::Hidden,{}});},16);
     action(L"All looks",Layout::prompts[2],[]{runtime.model.allLooks=!runtime.model.allLooks;runtime.dirty=true;runtime.model.page=0;redraw=true;},11);
@@ -384,10 +392,16 @@ void stepMenu(){
     if(paintHints)inputHints();
     bool escape=pressed(VK_ESCAPE)||(edges&XINPUT_GAMEPAD_B);if(escape){if(popup){popup=0;redraw=true;}else closeMenu();previousPad=pad;return;}
     if(!popup){
+    bool previousPage=pressed(VK_PRIOR)||(edges&XINPUT_GAMEPAD_DPAD_LEFT);
+    bool nextPage=pressed(VK_NEXT)||(edges&XINPUT_GAMEPAD_DPAD_RIGHT);
+    if(previousPage||nextPage){
+        changePage(previousPage?-1:1);
+        // Consume even a boundary press so a simultaneous stick/confirm input
+        // cannot move or select an item while the player is changing pages.
+        previousPad=pad;previousLeft=left;previousRight=right;return;
+    }
     if(pressed('A')||(left>128&&previousLeft<=128)){runtime.model.category=(runtime.model.category+4)%5;runtime.model.page=0;redraw=true;}
     if(pressed('D')||(right>128&&previousRight<=128)){runtime.model.category=(runtime.model.category+1)%5;runtime.model.page=0;redraw=true;}
-    if(pressed(VK_PRIOR)&&runtime.model.page){--runtime.model.page;redraw=true;}
-    if(pressed(VK_NEXT)){++runtime.model.page;redraw=true;}
     if(pressed('P')||(edges&XINPUT_GAMEPAD_START)){runtime.model.switchSet(1-runtime.model.displayedSet);requestRefresh(false,true);redraw=true;}
     if(pressed('Y')||(edges&XINPUT_GAMEPAD_RIGHT_THUMB)){runtime.model.allLooks=!runtime.model.allLooks;runtime.dirty=true;runtime.model.page=0;redraw=true;}
     if(pressed('F')||(edges&XINPUT_GAMEPAD_LEFT_THUMB))selectLook(static_cast<Slot>(runtime.model.category),{Choice::Mode::Hidden,{}});
@@ -400,8 +414,8 @@ void stepMenu(){
     }
     if(redraw){previousPad=pad;previousLeft=left;previousRight=right;return;}
     int navigation{};
-    if(pressed(VK_LEFT)||(edges&XINPUT_GAMEPAD_DPAD_LEFT))navigation=-1;
-    else if(pressed(VK_RIGHT)||(edges&XINPUT_GAMEPAD_DPAD_RIGHT))navigation=1;
+    if(pressed(VK_LEFT))navigation=-1;
+    else if(pressed(VK_RIGHT))navigation=1;
     else if(pressed(VK_UP)||(edges&XINPUT_GAMEPAD_DPAD_UP))navigation=popup?-1:-int(Layout::columns);
     else if(pressed(VK_DOWN)||(edges&XINPUT_GAMEPAD_DPAD_DOWN))navigation=popup?1:int(Layout::columns);
     else if(analog)navigation=analog==1?1:analog==-1?-1:analog==-2?(popup?-1:-int(Layout::columns)):(popup?1:int(Layout::columns));

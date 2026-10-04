@@ -21,8 +21,8 @@ Designed for game patch **1.0.5**. Requires UE4SS with C++ mod support and the n
 | --- | --- | --- |
 | Open Wardrobe | End, configurable | Select the Wardrobe hub tab |
 | Change category | A / D | Left / right trigger |
-| Select a look | Arrow keys, Enter | Left stick or D-pad, A |
-| Change page | Page Up / Page Down | Continue beyond the first or last tile |
+| Select a look | Arrow keys, Enter | Left stick, A; D-pad Up / Down moves rows |
+| Change page | Page Up / Page Down | D-pad Left / Right |
 | Day / night preview | P | Start / Menu |
 | Collected / all looks | Y | Right stick click |
 | Hide supported slot | F | Left stick click |
@@ -30,7 +30,7 @@ Designed for game patch **1.0.5**. Requires UE4SS with C++ mod support and the n
 | Reset displayed outfit | R | Hold X |
 | Close or cancel | Escape | B |
 
-All actions also have on-screen mouse controls. The action hints use the game's keyboard and Xbox glyphs and follow the active input device. Hold the left stick to repeat movement; vertical navigation preserves the column when crossing pages. Changing the previewed day/night set does not change your active equipment loadout. Each page holds up to 36 choices; focus a tile to see its name below the grid. The equipment panel shows the displayed outfit, with the selected category's name underneath. NPC appearances without an inventory image use their category symbol.
+All actions also have on-screen mouse controls. The action hints use the game's keyboard and Xbox glyphs and follow the active input device, including Page Up / Page Down or D-pad indicators beside Previous and Next. Press D-pad Left / Right to change one page at a time. Hold the left stick to repeat item movement; vertical navigation preserves the column when crossing pages. Changing the previewed day/night set does not change your active equipment loadout. Each page holds up to 36 choices; focus a tile to see its name below the grid. The equipment panel shows the displayed outfit, with the selected category's name underneath. NPC appearances without an inventory image use their category symbol.
 
 Within each category, **Player Outfits** with inventory icons appear first, followed by **NPC Outfits** without item icons. Both groups sort alphabetically by their displayed names, ignoring case. Each group starts on its own page and has a small heading above the grid. **Original look** and **Hide**, where available, stay at the front of the list. The same order applies when filtering collected looks.
 
