@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fix warped forearms when hiding gloves or wristbands.
+
 ## 0.1.0
 
 - Add a dedicated Wardrobe tab with an inventory-style grid, character preview and equipment slots.

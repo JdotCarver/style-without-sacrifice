@@ -84,6 +84,21 @@ void weaponAppearance(UObject* actor){
     // Hidden applies to the sheathed weapon; drawn weapons remain visible.
     if(runtime.settings.enabled&&c.mode==Choice::Mode::Look&&weaponMesh[set])editMesh(mesh,weaponMesh[set].get(),true,true);
 }
+bool prepareHiddenRow(UScriptStruct* type,unsigned slot,OwnedRow& row){
+    if(slot!=static_cast<unsigned>(Slot::Gauntlets))return true;
+    auto mesh=property(type,L"Mesh");
+    if(!mesh||!mesh->IsA<FStructProperty>())return false;
+    auto meshType=static_cast<FStructProperty*>(mesh)->GetStruct();
+    auto index=meshType?property(meshType,L"GauntletIndex"):nullptr;
+    if(!index||!index->IsA<FByteProperty>()||index->GetSize()!=1||
+       static_cast<const FProperty*>(index)->GetOffset_Internal()!=6)return false;
+    // AppearanceMesh initializes this byte to 255. The wrist-slot consumer
+    // converts it directly to the arm deformation parameter, without treating
+    // 255 as a sentinel. With no wrist garment the game uses 0, so this row must too.
+    auto data=mesh->ContainerPtrToValuePtr<void>(row.bytes.data());
+    number(index,data,0);
+    return integer(index,data)==0;
+}
 void prepareRows(){
     auto type=static_cast<UScriptStruct*>(rowType.get());if(!type)return;
     for(unsigned set=0;set<2;++set)for(unsigned slot=0;slot<4;++slot){
@@ -93,7 +108,13 @@ void prepareRows(){
         if(choice.mode==Choice::Mode::Original)continue;
         auto row=choice.mode==Choice::Mode::Look?lookup(false,choice.row):nullptr;
         if(choice.mode==Choice::Mode::Look&&(!row||slotFor(row)!=static_cast<int>(slot))){warn(L"A saved garment is unavailable; keeping the equipped look.");continue;}
-        snapshot=std::make_unique<OwnedRow>(type,row);number(slotProperty,snapshot->bytes.data(),slotValues[slot]);
+        auto prepared=std::make_unique<OwnedRow>(type,row);number(slotProperty,prepared->bytes.data(),slotValues[slot]);
+        if(choice.mode==Choice::Mode::Hidden&&!prepareHiddenRow(type,slot,*prepared)){
+            warn(L"Hidden wrists require the GauntletIndex byte field; keeping the equipped look.");continue;
+        }
+        snapshot=std::move(prepared);
+        if(logging&&choice.mode==Choice::Mode::Hidden&&slot==static_cast<unsigned>(Slot::Gauntlets))
+            trace(L"Hidden wrists prepared with neutral arm deformation: set="+std::to_wstring(set));
     }
     auto wt=static_cast<UScriptStruct*>(weaponType.get());
     for(unsigned set=0;set<2;++set){auto& c=runtime.model.sets[set][4];

@@ -1,3 +1,4 @@
+- Fix warped forearms when hiding gloves or wristbands.
 - Add a dedicated Wardrobe tab with an inventory-style grid, character preview and equipment slots.
 - Choose armour, legwear, gloves/wristbands, footwear and weapon appearances while keeping equipped stats.
 - Browse alphabetical Player Outfits first, followed by NPC Outfits, with group headings and collected/all-look filters.

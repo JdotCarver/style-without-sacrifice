@@ -42,13 +42,13 @@ The mod creates `settings.ini` and `wardrobe.dat` inside `ue4ss/Mods/WardrobeTra
 
 Selecting **Original look** restores that slot's equipped appearance. **Reset Set** clears the displayed outfit. Presets store one complete outfit and can be loaded into either set.
 
-**Known issue:** Removing wrist equipment can reveal a malformed mesh around the wrists. I'm investigating whether this can be fixed.
+Hiding gloves or wristbands restores the natural forearm shape in both the character preview and gameplay.
 
 The character preview stays in place while you change looks or save outfits. Selecting a look updates its highlight and outfit summary without rebuilding the grid. Item images load as their page is built. Ordinary pickups update collected looks without rebuilding your clothing. Saving runs in the background; close the game normally to let outstanding saves finish.
 
 With Logging enabled, a completed page records its group, visible-entry and cached-image counts. Page construction is limited to two entries per continuation. Grouping uses saved icon references without loading preview textures for the full catalog.
 
-Logging defaults to Off. Turn it on in Mod Setting Menu to record player attachment, game hub detection, tab creation and placement beside Inventory, page opening, aggregate catalog, inventory, refresh and appearance-override counts, total work time, and the longest active mod tick in `Dawnwalker/Binaries/Win64/ue4ss/UE4SS.log`. Operational failures include the failed action and error detail, once per distinct message, even when detailed logging is off. Failed player setup stops after twelve attempts; a later player event or shortcut press can retry it.
+Logging defaults to Off. Turn it on in Mod Setting Menu to record player attachment, game hub detection, tab creation and placement beside Inventory, page opening, hidden-wrist preparation, aggregate catalog, inventory, refresh and appearance-override counts, total work time, and the longest active mod tick in `Dawnwalker/Binaries/Win64/ue4ss/UE4SS.log`. Operational failures include the failed action and error detail, once per distinct message, even when detailed logging is off. Failed player setup stops after twelve attempts; a later player event or shortcut press can retry it.
 
 ## Source
 

@@ -19,6 +19,8 @@ The DLL is `build/Release/main.dll`. The archive is `build/Style-Without-Sacrifi
 
 The clothing hook identifies the specific accessor's instructions in executable memory. Reflected row structure and slot checks protect the data handed back to the game. A changed accessor disables that hook and reports the missing capability. No game version string or whole-file hash is used as a runtime gate.
 
+Hidden wrist rows explicitly set the reflected `AppearanceMesh.GauntletIndex` byte to zero, matching the game's unoccupied wrist slot. The native row constructor's value of 255 is passed directly to arm deformation when the wrist slot has a row. Missing or changed field metadata leaves that slot's equipped look in place; other appearances remain available.
+
 Catalog processing is incremental; appearance work follows inventory and player events. The native UI is built from the game's loaded widget classes. Game assets are loaded from the installed game and are not redistributed.
 
 Hard object parameters use the property's copy operation. The SDK's legacy `SetObjectPropertyValue` wrapper has no mapping in its UE5.5 virtual table definitions, even when the host exports the wrapper. The Wardrobe page is a native panel in the existing hub widget tree; hub activation and tab rebuilding drive its setup. Attachment exceptions consume the same finite retry budget as missing data, and other failed actions cancel their pending work.
