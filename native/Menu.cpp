@@ -1,4 +1,5 @@
 #include "Runtime.hpp"
+#include "ScriptEvent.hpp"
 #include <Unreal/Core/Windows/AllowWindowsPlatformTypes.hpp>
 #include <Windows.h>
 #include <Xinput.h>
@@ -9,8 +10,8 @@ namespace Wardrobe {
 namespace {
 constexpr auto tagName=L"UI.Menu.HUB.WardrobeTransmog";
 Ref page,tree,root,grid,title,footer,navbar,tabButton,previewImage;
-Ref showFunction,deactivateFunction,rebuildFunction;
-Ref activateFunction;
+Ref showFunction,hubGraph;
+ScriptEvent activated,deactivated,rebuilt;
 Work injection;bool wantsOpen{},redraw{},built{};unsigned tileCursor{},popup{},focus{};
 struct Button {Ref object,label;std::function<void()> click;};std::vector<Button> buttons;
 std::vector<Button> controls;
@@ -129,7 +130,7 @@ void show(){
 }
 bool inject(){
     auto hub=runtime.hub.get();if(!hub)return false;auto nav=object(hub,L"NavBar");if(!nav)return false;navbar=Ref(nav);
-    showFunction=Ref(function(hub,L"Show Tab"));deactivateFunction=Ref(function(hub,L"BP_OnDeactivated"));rebuildFunction=Ref(function(nav,L"Rebuild Buttons"));if(!showFunction)return false;
+    showFunction=Ref(function(hub,L"Show Tab"));activated.bind(hub,L"BP_OnActivated");deactivated.bind(hub,L"BP_OnDeactivated");rebuilt.bind(nav,L"Rebuild Buttons");if(!showFunction)return false;
     Call c(nav,L"CreateTabButton");if(!c)return false;auto row=c.field(L"HubTabRow");if(!row||!row->IsA<FStructProperty>())return false;
     auto st=static_cast<FStructProperty*>(row)->GetStruct();void* data=c.value(L"HubTabRow");tag(property(st,L"TabTag"),data,tagName);assignText(property(st,L"DisplayName"),data,L"WARDROBE");
     auto group=object(nav,L"Tab Button Group");if(!group)return false;int64_t before=-1;{Call count(group,L"GetButtonCount");if(count){count.invoke();before=count.resultInteger();}}
@@ -140,13 +141,14 @@ bool inject(){
 }
 void move(int delta){if(buttons.empty())return;int next=static_cast<int>(focus)+delta;if(!popup&&next<0&&runtime.model.page){--runtime.model.page;redraw=true;return;}if(!popup&&next>=static_cast<int>(buttons.size())&&(runtime.model.page+1)*12<pageChoices.size()){++runtime.model.page;redraw=true;return;}focus=static_cast<unsigned>((next+static_cast<int>(buttons.size()))%static_cast<int>(buttons.size()));for(unsigned i=0;i<buttons.size();++i)if(auto b=buttons[i].object.get())setNumber(b,L"SetRenderOpacity",L"InOpacity",i==focus?1:.65);}
 }
-void initializeMenu(){activateFunction=Ref(find(L"/Game/_Dawnwalker/UI/_Unified/GameHub/WBP_Window_GameHub.WBP_Window_GameHub_C:BP_OnActivated"));}
+void initializeMenu(){hubGraph=Ref(find(L"/Game/_Dawnwalker/UI/_Unified/GameHub/WBP_Window_GameHub.WBP_Window_GameHub_C:ExecuteUbergraph_WBP_Window_GameHub"));}
 bool menuPending(){return injection.pending||wantsOpen;}
 void menuHub(UObject* h){
     if(runtime.hub.matches(h)&&navbar.matches(object(h,L"NavBar"))&&tabButton){
         auto p=property(tabButton.get(),L"ButtonTag");if(p&&p->IsA<FStructProperty>()){auto type=static_cast<FStructProperty*>(p)->GetStruct();if(text(property(type,L"TagName"),p->ContainerPtrToValuePtr<void>(tabButton.get()))==tagName)return;}
     }
-    bool open=wantsOpen;stopPreview();resetMenu();wantsOpen=open;runtime.hub=Ref(h);activateFunction=Ref(function(h,L"BP_OnActivated"));injection.request(runtime.now);
+    bool open=wantsOpen;stopPreview();resetMenu();wantsOpen=open;runtime.hub=Ref(h);hubGraph=Ref(function(h,L"ExecuteUbergraph_WBP_Window_GameHub"));injection.request(runtime.now);
+    if(logging)trace(L"Game hub detected; preparing Wardrobe tab.");
 }
 void menuRedraw(){redraw=true;}
 void menuScriptPre(UObject* owner,UFunction* fn,void* params,Hook::TCallbackIterationData<void>& info){
@@ -154,31 +156,37 @@ void menuScriptPre(UObject* owner,UFunction* fn,void* params,Hook::TCallbackIter
     if(ourTag(fn,params)){info.PreventOriginalFunctionCall();if(runtime.settings.enabled){if(runtime.playerReady)wantsOpen=true;else requestOpen();}}
     else if(runtime.menuOpen){runtime.menuOpen=false;stopPreview();writeStore();}
 }
-void menuScriptPost(UObject* owner,UFunction* fn,void*){
-    // BP_OnActivated is delivered even when CommonUI calls its native
-    // activation directly, bypassing the reflected ActivateWidget wrapper.
-    // After binding, the normal miss path compares only function pointers.
-    if(fn&&(activateFunction.address==fn||!activateFunction.address)){
-        static const FName activated(L"BP_OnActivated"),hubClass(L"WBP_Window_GameHub_C");
-        if(fn->GetFName()==activated&&owner&&owner->GetClassPrivate()->GetFName()==hubClass){activateFunction=Ref(fn);queueHub(owner);}
+void menuScriptPost(UObject* owner,UFunction* fn,void* params){
+    // Parameterless Blueprint events can skip BP_OnActivated and run the
+    // compiled event graph directly. Its first execution discovers the hub.
+    if(fn&&owner&&(hubGraph.address==fn||!hubGraph.address)){
+        static const FName graphName(L"ExecuteUbergraph_WBP_Window_GameHub"),hubClass(L"WBP_Window_GameHub_C");
+        if(fn->GetFName()==graphName&&owner->GetClassPrivate()->GetFName()==hubClass){
+            hubGraph=Ref(fn);if(!runtime.hub.matches(owner)||!navbar)queueHub(owner);
+        }
     }
-    if(runtime.hub.matches(owner)&&deactivateFunction.matches(fn)){runtime.menuOpen=false;stopPreview();writeStore();}
-    if(rebuildFunction.matches(fn)&&navbar.matches(owner)){tabButton={};injection.cancel();injection.request(runtime.now);}
+    if(runtime.hub.matches(owner)){
+        if(activated.matches(fn,params))queueHub(owner);
+        if(deactivated.matches(fn,params)){runtime.menuOpen=false;stopPreview();writeStore();}
+    }
+    if(navbar.matches(owner)&&rebuilt.matches(fn,params)){tabButton={};injection.cancel();injection.request(runtime.now);}
 }
 void openMenu(){
     if(!runtime.player)return;wantsOpen=true;
     // The normal hub owns pause/input and navigation. Its creation event then
     // injects the Wardrobe button and selects this page.
-    auto frontend=static_cast<UObject*>(nullptr);
-    Call sub(find(L"/Script/Engine.Default__SubsystemBlueprintLibrary"),L"GetGameInstanceSubsystem");
-    if(sub){sub.obj(L"ContextObject",runtime.player.get()).obj(L"Class",find(L"/Script/DogwoodUI.UIManagerSubsystem")).invoke();frontend=object(sub.resultObject(),L"ActiveFrontendWidget");}
-    auto layer=object(frontend,L"GameMenuLayer");auto cls=asset(L"/Game/_Dawnwalker/UI/_Unified/GameHub/WBP_Window_GameHub.WBP_Window_GameHub_C");
-    if(layer&&cls){
+    // UIManagerSubsystem belongs to the local player. The game's own helper
+    // resolves that owner and its active frontend; a game-instance lookup fails.
+    Call frontendCall(find(L"/Script/DogwoodUI.Default__UIFrontend"),L"GetFrontend");
+    frontendCall.obj(L"WorldContextObject",runtime.player.get()).invoke();auto frontend=frontendCall.resultObject();
+    if(!frontend)throw std::runtime_error("UIFrontend.GetFrontend returned no active frontend");
+    auto layer=object(frontend,L"GameMenuLayer");if(!layer)throw std::runtime_error("Active UIFrontend has no GameMenuLayer");
+    auto cls=asset(L"/Game/_Dawnwalker/UI/_Unified/GameHub/WBP_Window_GameHub.WBP_Window_GameHub_C");if(!cls)throw std::runtime_error("Game hub widget class could not be loaded");
+    {
         Call current(layer,L"GetActiveWidget");current.invoke();auto h=current.resultObject();
-        if(runtime.hub.matches(h)&&tabButton){show();return;}
+        if(h&&h->GetClassPrivate()==cls){menuHub(h);if(tabButton)show();return;}
         Call c(layer,L"BP_AddWidget");c.obj(L"ActivatableWidgetClass",cls).invoke();auto created=c.resultObject();if(!created)throw std::runtime_error("The game menu layer did not create a hub");menuHub(created);
     }
-    else {wantsOpen=false;warn(L"Open the character menu once to initialize the Wardrobe tab.");}
 }
 void closeMenu(){
     wantsOpen=false;popup=0;if(!runtime.menuOpen){stopPreview();return;}runtime.menuOpen=false;stopPreview();
@@ -186,7 +194,7 @@ void closeMenu(){
 }
 void resetMenu(){
     auto oldPage=page;
-    runtime.menuOpen=false;wantsOpen=false;popup=0;injection.cancel();page={};tree={};root={};grid={};title={};footer={};navbar={};tabButton={};previewImage={};showFunction={};deactivateFunction={};rebuildFunction={};activateFunction={};buttons.clear();controls.clear();pendingControls.clear();filtered.clear();pageChoices.clear();built=false;
+    runtime.menuOpen=false;wantsOpen=false;popup=0;injection.cancel();page={};tree={};root={};grid={};title={};footer={};navbar={};tabButton={};previewImage={};showFunction={};hubGraph={};activated={};deactivated={};rebuilt={};buttons.clear();controls.clear();pendingControls.clear();filtered.clear();pageChoices.clear();built=false;
     if(auto p=oldPage.get())try{call(p,L"RemoveFromParent");}catch(const std::exception& e){failure(L"Removing Wardrobe page",e);}
 }
 void stepMenu(){

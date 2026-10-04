@@ -23,4 +23,6 @@ Catalog processing is incremental; appearance work follows inventory and player 
 
 Hard object parameters use the property's copy operation. The SDK's legacy `SetObjectPropertyValue` wrapper has no mapping in its UE5.5 virtual table definitions, even when the host exports the wrapper. The Wardrobe page is a native panel in the existing hub widget tree; hub activation and tab rebuilding drive its setup. Attachment exceptions consume the same finite retry budget as missing data, and other failed actions cancel their pending work.
 
+Menu opening uses `UIFrontend.GetFrontend` to resolve the local player's active UI. Blueprint lifecycle bindings handle both direct events and their optimized event-graph calls. Graph targets and entry offsets come from the loaded functions, with a validated integer `EntryPoint` parameter; no fixed Blueprint offsets are assumed.
+
 The source license is MIT. Preserve the bundled dependency notices when distributing binaries. The UE4SS SDK's MIT license is included under `LICENSES`.

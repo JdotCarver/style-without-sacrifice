@@ -42,7 +42,7 @@ Selecting **Original look** restores that slot's equipped appearance. **Reset Se
 
 The character preview stays in place while you change looks or save outfits. Ordinary pickups update collected looks without rebuilding your clothing. Saving runs in the background; close the game normally to let outstanding saves finish.
 
-Logging defaults to Off. Turn it on in Mod Setting Menu to record player attachment, tab creation, page opening, aggregate catalog, inventory, refresh and appearance-override counts, total work time, and the longest active mod tick in `Dawnwalker/Binaries/Win64/ue4ss/UE4SS.log`. Operational failures include the failed action and error detail, once per distinct message, even when detailed logging is off. Failed player setup stops after twelve attempts; a later player event or shortcut press can retry it.
+Logging defaults to Off. Turn it on in Mod Setting Menu to record player attachment, game hub detection, tab creation, page opening, aggregate catalog, inventory, refresh and appearance-override counts, total work time, and the longest active mod tick in `Dawnwalker/Binaries/Win64/ue4ss/UE4SS.log`. Operational failures include the failed action and error detail, once per distinct message, even when detailed logging is off. Failed player setup stops after twelve attempts; a later player event or shortcut press can retry it.
 
 ## Source
 
