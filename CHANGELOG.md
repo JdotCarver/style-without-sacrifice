@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.2
+## 1.0
 
 - Weapon appearances now use their own sheathed size, including scabbards and the character preview.
 
