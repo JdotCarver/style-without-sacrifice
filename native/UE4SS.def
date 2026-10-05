@@ -31,6 +31,7 @@ EXPORTS
     ?GetChildren@UStruct@Unreal@RC@@QEAAAEAV?$TObjectPtr@VUField@Unreal@RC@@@23@XZ
     ?GetClass@FField@Unreal@RC@@QEAA?AVFFieldClassVariant@23@XZ
     ?GetClassCastFlags@FFieldClassVariant@Unreal@RC@@QEBA?AW4EClassCastFlags@23@XZ
+    ?GetClassDefaultObject@UClass@Unreal@RC@@QEAAAEAV?$TObjectPtr@VUObject@Unreal@RC@@@23@XZ
     ?GetClassPrivate@UObjectBase@Unreal@RC@@QEAAAEAPEAVUClass@23@XZ
     ?GetClassPrivate@UObjectBase@Unreal@RC@@QEBAAEAPEBVUClass@23@XZ
     ?GetElementSize@FProperty@Unreal@RC@@QEAAAEAHXZ
@@ -97,6 +98,7 @@ EXPORTS
     ?StaticClass@FArrayProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FBoolProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FByteProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
+    ?StaticClass@FDoubleProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FEnumProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FIntProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FNameProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
@@ -107,6 +109,7 @@ EXPORTS
     ?StaticClass@FStrProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FStructProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FTextProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
+    ?StaticClass@UClass@Unreal@RC@@SAPEAV123@XZ
     ?StaticClass@UDataTable@Unreal@RC@@SAPEAVUClass@23@XZ
     ?StaticConstructObject@UObjectGlobals@Unreal@RC@@YAPEAVUObject@23@AEBUFStaticConstructObjectParameters@23@@Z
     ?ToString@FName@Unreal@RC@@QEAA?AV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@XZ

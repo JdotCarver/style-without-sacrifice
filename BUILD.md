@@ -23,6 +23,8 @@ Hidden wrist rows explicitly set the reflected `AppearanceMesh.GauntletIndex` by
 
 Catalog processing is incremental; appearance work follows inventory and player events. The native UI is built from the game's loaded widget classes. Game assets are loaded from the installed game and are not redistributed.
 
+Weapon sizing resolves the selected appearance's item and `WeaponBlueprint` class defaults, then calls the reflected `GetSheathedWeaponScale` with that item's `WeaponType`. Enum and double-vector layouts are checked before use. Catalog-only meshes without an item asset use their authored unit scale. The resulting owned scale is cached with the choice and applied to sheathed weapon and scabbard components through `SetRelativeScale3D`. Scale restoration is conditional on the installed mesh and scale still matching; shared item assets and class defaults are never modified. Missing sizing capabilities leave the equipped weapon appearance in place.
+
 Hard object parameters use the property's copy operation. The SDK's legacy `SetObjectPropertyValue` wrapper has no mapping in its UE5.5 virtual table definitions, even when the host exports the wrapper. The Wardrobe page is a native panel in the existing hub widget tree; hub activation and tab rebuilding drive its setup. Attachment exceptions consume the same finite retry budget as missing data, and other failed actions cancel their pending work.
 
 Menu opening uses `UIFrontend.GetFrontend` to resolve the local player's active UI. Blueprint lifecycle bindings handle both direct events and their optimized event-graph calls. Graph targets and entry offsets come from the loaded functions, with a validated integer `EntryPoint` parameter; no fixed Blueprint offsets are assumed.
