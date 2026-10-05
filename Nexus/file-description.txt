@@ -1,1 +1,1 @@
-Fix warped forearms when hiding gloves or wristbands.
+Weapon appearances now use their own sheathed size, including scabbards and the character preview.
