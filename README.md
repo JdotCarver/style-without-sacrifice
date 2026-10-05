@@ -42,7 +42,7 @@ The mod creates `settings.ini` and `wardrobe.dat` inside `ue4ss/Mods/WardrobeTra
 
 Selecting **Original look** restores that slot's equipped appearance. **Reset Set** clears the displayed outfit. Presets store one complete outfit and can be loaded into either set.
 
-Sheathed weapons and their scabbards use the size of the selected weapon appearance, including in the character preview. Choosing a greatsword look keeps its greatsword size when sheathed, regardless of the weapon equipped for its stats.
+Selected weapon appearances keep their authored size while drawn or sheathed, with matching scabbards and character previews. Choosing a greatsword look keeps its greatsword size regardless of the weapon equipped for its stats.
 
 Hiding gloves or wristbands restores the natural forearm shape in both the character preview and gameplay.
 

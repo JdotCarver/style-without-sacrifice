@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fix greatsword appearances shrinking to one-handed size. Selected weapons keep their size while drawn or sheathed, including scabbards and character previews.
+
 ## 1.0
 
 - Weapon appearances now use their own sheathed size, including scabbards and the character preview.

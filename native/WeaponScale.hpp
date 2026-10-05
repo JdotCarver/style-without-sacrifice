@@ -47,12 +47,9 @@ inline std::optional<MeshScale> selectedWeaponScale(const std::wstring& row){
         if(logging)trace(L"Weapon appearance has no item defaults; using authored mesh scale: "+row);
         return MeshScale{1,1,1};
     }
-    auto type=property(item,L"WeaponType"),blueprint=property(item,L"WeaponBlueprint");
-    if(!type||!type->IsA<FEnumProperty>()||type->GetSize()!=1)
-        return weaponScaleFailure(L"WeaponType is not a byte enum.",row);
-    // Class loading may dispatch engine callbacks. Capture the value and enum
-    // identity before loading, and copy the asset reference into owned params.
-    auto selectedType=integer(type,item);Ref selectedEnum(static_cast<FEnumProperty*>(type)->GetEnum());
+    auto blueprint=property(item,L"WeaponBlueprint");
+    // Class loading may dispatch engine callbacks. Copy the asset reference
+    // into owned parameters before loading; no borrowed item field survives it.
     UObject* cls=nullptr;
     if(blueprint&&blueprint->IsA<FSoftClassProperty>()){
         Call load(find(L"/Script/Engine.Default__KismetSystemLibrary"),L"LoadClassAsset_Blocking");
@@ -71,17 +68,17 @@ inline std::optional<MeshScale> selectedWeaponScale(const std::wstring& row){
     if(!cls||!cls->IsA<UClass>())return weaponScaleFailure(L"WeaponBlueprint did not load a class.",row);
     auto defaults=static_cast<UClass*>(cls)->GetClassDefaultObject().Get();
     if(!defaults||!defaults->IsA(static_cast<UClass*>(cls)))return weaponScaleFailure(L"Weapon class defaults are unavailable.",row);
-    Call get(defaults,L"GetSheathedWeaponScale");if(!get)return weaponScaleFailure(L"GetSheathedWeaponScale is unavailable.",row);
-    auto input=get.field(L"WeaponType"),result=get.fn->GetReturnProperty();
-    if(!input||!input->IsA<FEnumProperty>()||input->GetSize()!=1||
-       !selectedEnum||static_cast<FEnumProperty*>(input)->GetEnum()!=selectedEnum.get()||
-       !scaleField(result)||get.fn->GetParmsSize()!=32||
-       static_cast<const FProperty*>(input)->GetOffset_Internal()!=0||static_cast<const FProperty*>(result)->GetOffset_Internal()!=8)
-        return weaponScaleFailure(L"GetSheathedWeaponScale has an incompatible enum or vector layout.",row);
-    get.num(L"WeaponType",selectedType).invoke();
-    auto scale=readScale(result,get.data());
-    if(!scale)return weaponScaleFailure(L"GetSheathedWeaponScale returned an invalid vector.",row);
-    for(auto v:*scale)if(v<=0)return weaponScaleFailure(L"GetSheathedWeaponScale returned a nonpositive scale.",row);
+    // GetSheathedWeaponScale contains the game's stowage reduction (0.8 for
+    // greatswords), not the selected mesh's authored size (1.2). Use the class's
+    // BaseMesh template for both drawn and sheathed appearances. Never modify it.
+    auto meshField=property(defaults,L"BaseMesh");
+    if(!meshField||!meshField->IsA<FObjectProperty>()||meshField->GetSize()!=sizeof(void*))
+        return weaponScaleFailure(L"Weapon class BaseMesh is not an object reference.",row);
+    auto mesh=readObject(meshField,defaults);
+    if(!mesh)return weaponScaleFailure(L"Weapon class BaseMesh defaults are unavailable.",row);
+    auto scale=readScale(property(mesh,L"RelativeScale3D"),mesh);
+    if(!scale)return weaponScaleFailure(L"Weapon class BaseMesh has an incompatible or invalid scale.",row);
+    for(auto v:*scale)if(v<=0)return weaponScaleFailure(L"Weapon class BaseMesh has a nonpositive scale.",row);
     return scale;
 }
 }
