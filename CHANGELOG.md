@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.1
 
 - Fix warped forearms when hiding gloves or wristbands.
 
