@@ -130,7 +130,7 @@ void prepareWeaponRows(){
             // than a pointer into the table across those calls.
             OwnedRow selected(wt,row);
             auto scale=selectedWeaponScale(c.row);
-            if(!scale){warn(L"Selected weapon sizing is unavailable; keeping the equipped weapon appearance.");continue;}
+            if(!scale)continue;
             auto type=static_cast<UScriptStruct*>(selected.type.get());if(!type)continue;
             weaponScale[set]=scale;
             weaponMesh[set]=Ref(loadAsset(property(type,L"WeaponMesh"),selected.bytes.data()));

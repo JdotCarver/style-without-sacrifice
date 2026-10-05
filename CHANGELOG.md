@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Sheathed weapons and scabbards now match the size of the chosen weapon appearance, including in the character preview.
+- Fix weapon appearance selections being ignored while Hide still works.
 
 ## 0.1.1
 

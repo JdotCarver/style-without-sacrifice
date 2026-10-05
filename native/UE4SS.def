@@ -98,6 +98,7 @@ EXPORTS
     ?StaticClass@FArrayProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FBoolProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FByteProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
+    ?StaticClass@FClassProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FDoubleProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FEnumProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FIntProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
@@ -105,6 +106,7 @@ EXPORTS
     ?StaticClass@FNumericProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FObjectProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FObjectPropertyBase@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
+    ?StaticClass@FSoftClassProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FSoftObjectProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FStrProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
     ?StaticClass@FStructProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
