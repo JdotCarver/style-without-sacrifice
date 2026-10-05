@@ -13,7 +13,7 @@ Open Wardrobe with **End**, or select its tab immediately after **Inventory** in
 
 ## Dependencies
 
-Designed for game patch **1.0.5**. Requires UE4SS with C++ mod support and the native EngineTick, BeginPlay, EndPlay and ProcessLocalScriptFunction callbacks available. Mod Setting Menu **1.0.7.1 or later** provides the settings page. The loader and settings menu are separate downloads.
+Designed for game patch **1.0.5**. Requires [UE4SS for Dawnwalker by Vercadi](https://www.nexusmods.com/thebloodofdawnwalker/mods/18) **1.3 (RC6) or later** with C++ mod support and the native EngineTick, BeginPlay, EndPlay and ProcessLocalScriptFunction callbacks available. Mod Setting Menu **1.0.7.1 or later** provides the settings page. The loader and settings menu are separate downloads.
 
 ## Controls
 
