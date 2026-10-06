@@ -41,8 +41,8 @@ struct ItemRow {Ref item;std::wstring row;};
 std::unordered_map<UObject*,ItemRow> itemLookup;
 struct MeshEdit {Ref component,original,installed;bool visible{},appliedVisible{},changedMesh{},changedVisibility{};std::optional<MeshScale> originalScale,installedScale;};
 std::array<MeshEdit,24> meshEdits;
-void restoreMeshes(){
- for(auto& edit:meshEdits){try{if(auto component=edit.component.get()){
+void restoreMesh(MeshEdit& edit){
+ try{if(auto component=edit.component.get()){
   const bool ownsMesh=object(component,L"StaticMesh")==edit.installed.address&&(!edit.installed.address||edit.installed);
   // Restore only our own scale, and only while our mesh still owns it. An
   // equipment refresh or another appearance writer may already have replaced it.
@@ -50,10 +50,20 @@ void restoreMeshes(){
       writeScale(component,*edit.originalScale);
   if(edit.changedMesh&&ownsMesh&&(!edit.original.address||edit.original)){Call c(component,L"SetStaticMesh");if(c)c.obj(L"NewMesh",edit.original.get()).invoke();}
   if(edit.changedVisibility&&ownsMesh){Call get(component,L"IsVisible");if(get){get.invoke();if((get.resultInteger()!=0)==edit.appliedVisible){Call set(component,L"SetVisibility");set.num(L"bNewVisibility",edit.visible).invoke();}}}
- }}catch(...){warn(L"A previous weapon appearance could not be restored during cleanup.");}edit={};}
+ }}catch(...){warn(L"A previous weapon appearance could not be restored during cleanup.");}edit={};
 }
+void restoreMeshes(){for(auto& edit:meshEdits)restoreMesh(edit);}
+void releaseMesh(UObject* component){if(component)for(auto& edit:meshEdits)if(edit.component.matches(component)){restoreMesh(edit);break;}}
 void editMesh(UObject* component,UObject* replacement,bool changeMesh,std::optional<bool> visible,const MeshScale* scale=nullptr){
- if(!component)return;for(auto& e:meshEdits)if(e.component.matches(component))return;
+ if(!component)return;for(auto& e:meshEdits)if(e.component.matches(component)){
+  // A character rebuild can overwrite a journaled component between ticks.
+  // Keep unchanged edits; rebase only the component the engine has reset.
+  bool intact=object(component,L"StaticMesh")==e.installed.address&&(!e.installed.address||e.installed)&&(!changeMesh||e.installed.address==replacement);
+  if(intact&&scale)intact=readScale(property(component,L"RelativeScale3D"),component)==*scale;
+  if(intact&&visible){Call get(component,L"IsVisible");if(get){get.invoke();intact=(get.resultInteger()!=0)==*visible;}else intact=false;}
+  if(intact)return;
+  restoreMesh(e);break;
+ }
  MeshEdit* entry=nullptr;for(auto& e:meshEdits)if(!e.component){entry=&e;break;}if(!entry)return;
  if(scale){
   auto original=readScale(property(component,L"RelativeScale3D"),component);
@@ -142,15 +152,45 @@ void weaponAppearance(UObject* actor){
     // Leave draw/sheath and pooled-weapon visibility under game control.
     // A remembered inactive weapon must never be revealed by changing its look.
     if(runtime.settings.enabled&&c.mode==Choice::Mode::Look&&weaponMesh[set]&&weaponScale[set])editMesh(mesh,weaponMesh[set].get(),true,std::nullopt,&*weaponScale[set]);
+    else releaseMesh(mesh);
+}
+void sheathedAppearance(UObject* owner,bool doll){
+    if(!owner||!runtime.settings.enabled)return;
+    unsigned set=doll?runtime.model.displayedSet:runtime.activeSet;auto& choice=runtime.model.sets[set][4];
+    auto sheathed=object(owner,doll?L"WeaponMesh":L"SheathedWeaponMesh");auto scabbard=object(owner,L"Scabbard");
+    if(!scabbard)scabbard=object(owner,L"ScabbardMesh");
+    if(choice.mode==Choice::Mode::Hidden){editMesh(sheathed,nullptr,false,false);editMesh(scabbard,nullptr,false,false);}
+    else if(choice.mode==Choice::Mode::Look&&weaponMesh[set]&&weaponScale[set]){editMesh(sheathed,weaponMesh[set].get(),true,std::nullopt,&*weaponScale[set]);editMesh(scabbard,scabbardMesh[set].get(),true,bool(scabbardMesh[set]),&*weaponScale[set]);}
+    else {releaseMesh(sheathed);releaseMesh(scabbard);}
 }
 void appearanceCompleted(UObject* app){
     if(!started||GetCurrentThreadId()!=threadId||insideRefresh||
        (!runtime.appearance.matches(app)&&!runtime.dollAppearance.matches(app)))return;
-    // Completion follows the game's deferred loading, mesh writes and native
-    // listeners. Reapply only; requesting another game rebuild would loop.
-    for(unsigned set=0;set<2;++set)if(!weaponMesh[set]||!weaponScale[set])preparedChoices[set][4].reset();
-    requestRefresh(false,false);
     if(logging)++runtime.appearanceEvents;
+    if(!runtime.settings.enabled)return;
+    // Stock inventory changes (including consumption) rebuild the sheathed
+    // meshes. Repair cached looks before returning to the engine, rather than
+    // exposing the equipped look until a later EngineTickPost continuation.
+    // Asset loading and failed preparation stay in the bounded worker.
+    bool doll=runtime.dollAppearance.matches(app);
+    runtime.activeSet=loadout();unsigned set=doll?runtime.model.displayedSet:runtime.activeSet;
+    const auto& choice=runtime.model.sets[set][4];
+    if(preparedChoices[set][4]!=choice||(choice.mode==Choice::Mode::Look&&
+       (!weaponMesh[set]||!weaponScale[set]||(scabbardMesh[set].address&&!scabbardMesh[set])))){
+        preparedChoices[set][4].reset();requestRefresh(false,false);return;
+    }
+    auto began=logging?std::chrono::steady_clock::now():std::chrono::steady_clock::time_point{};
+    insideRefresh=true;
+    try{
+        auto pawn=doll?runtime.doll.get():runtime.player.get();
+        if(!doll)sheathedAppearance(app,false);
+        sheathedAppearance(pawn,doll);
+        observeMainWeapon(pawn);
+        for(auto& w:weapons)if(auto actor=w.get();actor&&weaponOwner(actor)==pawn)weaponAppearance(actor);
+    }catch(...){insideRefresh=false;requestRefresh(false,false);throw;}
+    insideRefresh=false;
+    if(logging){auto elapsed=static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-began).count());
+        ++runtime.immediateAppearances;runtime.appearanceMicros+=elapsed;runtime.maxAppearanceMicros=std::max(runtime.maxAppearanceMicros,elapsed);}
 }
 void appearanceReady(UObject* app){
     originalAppearanceReady(app);
@@ -400,13 +440,7 @@ bool refresh(){
         // active loadout are never changed to refresh a preview.
         if(runtime.playerRefresh){Call c(app,L"OnInventoryContentsChanged");if(!c||c.fn->GetParmsSize()!=0){insideRefresh=false;warn(L"Appearance refresh signature unavailable.");return true;}c.invoke();}
         if(runtime.previewRefresh)if(auto doll=runtime.dollAppearance.get()){Call preview(doll,L"OnInventoryContentsChanged");if(preview&&preview.fn->GetParmsSize()==0)preview.invoke();}
-        for(auto owner:{app,runtime.player.get(),runtime.doll.get()})if(owner&&runtime.settings.enabled){
-            bool doll=runtime.doll.matches(owner);unsigned set=doll?runtime.model.displayedSet:runtime.activeSet;auto& choice=runtime.model.sets[set][4];
-            auto sheathed=object(owner,doll?L"WeaponMesh":L"SheathedWeaponMesh");auto scabbard=object(owner,L"Scabbard");
-            if(!scabbard)scabbard=object(owner,L"ScabbardMesh");
-            if(choice.mode==Choice::Mode::Hidden){editMesh(sheathed,nullptr,false,false);editMesh(scabbard,nullptr,false,false);}
-            else if(choice.mode==Choice::Mode::Look&&weaponMesh[set]&&weaponScale[set]){editMesh(sheathed,weaponMesh[set].get(),true,std::nullopt,&*weaponScale[set]);editMesh(scabbard,scabbardMesh[set].get(),true,bool(scabbardMesh[set]),&*weaponScale[set]);}
-        }
+        sheathedAppearance(app,false);sheathedAppearance(runtime.player.get(),false);sheathedAppearance(runtime.doll.get(),true);
         observeMainWeapon(runtime.player.get());observeMainWeapon(runtime.doll.get());
         for(auto& w:weapons)if(auto actor=w.get())weaponAppearance(actor);
         runtime.playerRefresh=runtime.previewRefresh=false;if(logging)++runtime.refreshes;insideRefresh=false;return true;

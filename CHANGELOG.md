@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Prevent weapon and scabbard appearances briefly reverting when consuming an item.
+
 ## 1.0.1
 
 - Fix greatsword appearances shrinking to one-handed size while drawn or sheathed, including scabbards and character previews.
