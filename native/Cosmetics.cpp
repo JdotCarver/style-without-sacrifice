@@ -1,5 +1,6 @@
 #include "Runtime.hpp"
 #include "NativeContract.hpp"
+#include "AppearanceCompletion.hpp"
 #include "CatalogOrder.hpp"
 #include "WeaponScale.hpp"
 #include <Windows.h>
@@ -15,6 +16,8 @@ namespace Wardrobe {
 namespace {
 using RowGetter=void*(*)(UObject*,UObject*);
 RowGetter originalRow{};void* rowTarget{};DWORD threadId{};
+using AppearanceReady=void(*)(UObject*);
+AppearanceReady originalAppearanceReady{};void* appearanceReadyTarget{};
 Ref subsystem,clothingTable,weaponTable,rowType,weaponType;
 Ref inventorySystem;
 std::deque<uint32_t> addedItems;
@@ -111,12 +114,47 @@ UObject* weaponOwner(UObject* actor){
     get.invoke();owner=get.resultObject();
     return runtime.player.matches(owner)||runtime.doll.matches(owner)?owner:nullptr;
 }
+bool physicalWeapon(UObject* actor){
+    auto p=property(actor,L"WeaponType");UEnum* enumeration=nullptr;
+    if(p&&p->GetSize()==1){
+        if(p->IsA<FEnumProperty>())enumeration=static_cast<FEnumProperty*>(p)->GetEnum();
+        else if(p->IsA<FByteProperty>())enumeration=static_cast<FByteProperty*>(p)->GetEnum();
+    }
+    if(enumeration&&enumeration->GetName()==L"EWeaponType"){
+        // This combat enum groups physical weapons under Sword; Fist and Claw
+        // also have WeaponBase actors, often with empty but visible meshes.
+        for(auto pair:enumeration->ForEachName())if(pair.Key.ToString()==L"EWeaponType::Sword")return integer(p,actor)==pair.Value;
+    }
+    warn(L"WeaponType classification is unavailable; drawn weapon overrides are disabled for this actor.");return false;
+}
+void observeMainWeapon(UObject* pawn){
+    auto combat=object(pawn,L"CombatComponent");if(!combat)return;
+    Call get(combat,L"GetMainWeapon");auto result=get?get.fn->GetReturnProperty():nullptr;
+    if(!result||!result->IsA<FObjectProperty>()||result->GetSize()!=sizeof(void*)||
+       static_cast<const FProperty*>(result)->GetOffset_Internal()!=0||get.fn->GetParmsSize()!=sizeof(void*)){
+        warn(L"Current weapon lookup is unavailable; waiting for a weapon appearance event.");return;
+    }
+    get.invoke();observeWeapon(get.resultObject());
+}
 void weaponAppearance(UObject* actor){
-    auto owner=weaponOwner(actor);if(!owner)return;
+    auto owner=weaponOwner(actor);if(!owner||!physicalWeapon(actor))return;
     auto mesh=object(actor,L"BaseMesh");if(!mesh)return;unsigned set=runtime.doll.matches(owner)?runtime.model.displayedSet:runtime.activeSet;auto& c=runtime.model.sets[set][4];
     // Leave draw/sheath and pooled-weapon visibility under game control.
     // A remembered inactive weapon must never be revealed by changing its look.
     if(runtime.settings.enabled&&c.mode==Choice::Mode::Look&&weaponMesh[set]&&weaponScale[set])editMesh(mesh,weaponMesh[set].get(),true,std::nullopt,&*weaponScale[set]);
+}
+void appearanceCompleted(UObject* app){
+    if(!started||GetCurrentThreadId()!=threadId||insideRefresh||
+       (!runtime.appearance.matches(app)&&!runtime.dollAppearance.matches(app)))return;
+    // Completion follows the game's deferred loading, mesh writes and native
+    // listeners. Reapply only; requesting another game rebuild would loop.
+    for(unsigned set=0;set<2;++set)if(!weaponMesh[set]||!weaponScale[set])preparedChoices[set][4].reset();
+    requestRefresh(false,false);
+    if(logging)++runtime.appearanceEvents;
+}
+void appearanceReady(UObject* app){
+    originalAppearanceReady(app);
+    try{appearanceCompleted(app);}catch(const std::exception& error){failure(L"Completed player appearance",error);}
 }
 bool prepareHiddenRow(UScriptStruct* type,unsigned slot,OwnedRow& row){
     if(slot!=static_cast<unsigned>(Slot::Gauntlets))return true;
@@ -203,14 +241,20 @@ bool tables(UObject* pawn){
 }
 bool startCosmetics(){
     threadId=GetCurrentThreadId();std::wstring error;
+    auto initialized=MH_Initialize();if(initialized!=MH_OK&&initialized!=MH_ERROR_ALREADY_INITIALIZED){warn(L"Native hook service unavailable.");return false;}
+    appearanceReadyTarget=AppearanceCompletion::resolve(error);
+    if(appearanceReadyTarget){
+        if(MH_CreateHook(appearanceReadyTarget,reinterpret_cast<void*>(appearanceReady),reinterpret_cast<void**>(&originalAppearanceReady))!=MH_OK){warn(L"Appearance completion is already modified or cannot be hooked.");appearanceReadyTarget=nullptr;}
+        else if(MH_EnableHook(appearanceReadyTarget)!=MH_OK){MH_RemoveHook(appearanceReadyTarget);appearanceReadyTarget=nullptr;warn(L"Appearance completion listener could not be enabled.");}
+    }else warn(L"Saved weapon appearance recovery unavailable: "+error);
+    started=true;
     rowTarget=NativeContract::resolve(error);
     if(!rowTarget){warn(L"Clothing overrides unavailable: "+error);return false;}
-    auto initialized=MH_Initialize();if(initialized!=MH_OK&&initialized!=MH_ERROR_ALREADY_INITIALIZED){warn(L"Native hook service unavailable.");return false;}
     if(MH_CreateHook(rowTarget,reinterpret_cast<void*>(clothingRow),reinterpret_cast<void**>(&originalRow))!=MH_OK){warn(L"Clothing lookup is already modified or cannot be hooked.");rowTarget=nullptr;return false;}
     if(MH_EnableHook(rowTarget)!=MH_OK){MH_RemoveHook(rowTarget);rowTarget=nullptr;return false;}
     started=true;return true;
 }
-void stopCosmetics(){started=false;if(rowTarget){MH_DisableHook(rowTarget);MH_RemoveHook(rowTarget);rowTarget=nullptr;}resetCosmetics();}
+void stopCosmetics(){started=false;if(appearanceReadyTarget){MH_DisableHook(appearanceReadyTarget);MH_RemoveHook(appearanceReadyTarget);appearanceReadyTarget=nullptr;}if(rowTarget){MH_DisableHook(rowTarget);MH_RemoveHook(rowTarget);rowTarget=nullptr;}resetCosmetics();}
 void resetCosmetics(bool restore){
     // Game-thread context changes release owned edits before forgetting them.
     // Loader-thread shutdown passes false and never invokes engine functions.
@@ -360,6 +404,7 @@ bool refresh(){
             if(choice.mode==Choice::Mode::Hidden){editMesh(sheathed,nullptr,false,false);editMesh(scabbard,nullptr,false,false);}
             else if(choice.mode==Choice::Mode::Look&&weaponMesh[set]&&weaponScale[set]){editMesh(sheathed,weaponMesh[set].get(),true,std::nullopt,&*weaponScale[set]);editMesh(scabbard,scabbardMesh[set].get(),true,bool(scabbardMesh[set]),&*weaponScale[set]);}
         }
+        observeMainWeapon(runtime.player.get());observeMainWeapon(runtime.doll.get());
         for(auto& w:weapons)if(auto actor=w.get())weaponAppearance(actor);
         runtime.playerRefresh=runtime.previewRefresh=false;if(logging)++runtime.refreshes;insideRefresh=false;return true;
     }catch(...){insideRefresh=false;warn(L"Appearance refresh could not complete; normal equipment remains intact.");return false;}
@@ -367,7 +412,8 @@ bool refresh(){
 void selectLook(Slot slot,const Choice& c){if(runtime.model.choose(slot,c)){runtime.dirty=true;requestRefresh(runtime.model.displayedSet==runtime.activeSet,true);if(logging)trace(L"Look selected: set="+std::to_wstring(runtime.model.displayedSet)+L", slot="+slotNames[static_cast<unsigned>(slot)]+L", mode="+std::to_wstring(static_cast<int>(c.mode))+L", row="+c.row);}}
 void setDoll(UObject* p){runtime.doll=Ref(p);runtime.dollAppearance=Ref(object(p,L"AppearanceComponent"));requestRefresh(false,true);}
 void observeWeapon(UObject* p){
-    if(!p||!weaponOwner(p))return;
+    if(!p||!weaponOwner(p)||!physicalWeapon(p))return;
+    watchWeaponEvents(p);
     if(logging)++runtime.weaponEvents;
     bool known=false;for(auto& r:weapons)if(r.matches(p)){known=true;break;}
     if(!known){

@@ -17,7 +17,8 @@ inline bool matches(const unsigned char* bytes,size_t length){
  for(size_t k=0;k<code.size();++k)if(mask[k]&&bytes[k]!=code[k])return false;
  return true;
 }
-inline void* resolve(std::wstring& error){
+template<size_t N,class Validator>
+inline void* resolveCode(const std::array<unsigned char,N>& expected,const std::array<unsigned char,N>& fixed,Validator validate,std::wstring& error){
  auto base=reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr));
  if(!base){error=L"game image unavailable";return nullptr;}
  auto dos=reinterpret_cast<IMAGE_DOS_HEADER*>(base);
@@ -29,20 +30,22 @@ inline void* resolve(std::wstring& error){
  for(unsigned s=0;s<nt->FileHeader.NumberOfSections;++s){
   if(!(section[s].Characteristics&IMAGE_SCN_MEM_EXECUTE))continue;
   size_t begin=section[s].VirtualAddress,size=section[s].Misc.VirtualSize;
-  if(begin>=nt->OptionalHeader.SizeOfImage||size>nt->OptionalHeader.SizeOfImage-begin||size<code.size())continue;
-  for(size_t i=0;i+code.size()<=size;){
+  if(begin>=nt->OptionalHeader.SizeOfImage||size>nt->OptionalHeader.SizeOfImage-begin||size<N)continue;
+  for(size_t i=0;i+N<=size;){
    auto start=base+begin+i;MEMORY_BASIC_INFORMATION m{};if(!VirtualQuery(start,&m,sizeof(m))||!m.RegionSize)break;
    size_t end=std::min<size_t>(size,static_cast<unsigned char*>(m.BaseAddress)+m.RegionSize-(base+begin));
    if(end<=i)break;
    if(m.State==MEM_COMMIT&&m.AllocationBase==base&&!(m.Protect&(PAGE_GUARD|PAGE_NOACCESS))){
-    for(;i+code.size()<=end;++i){auto p=base+begin+i;if(p[0]!=code[0]||p[1]!=code[1]||p[2]!=code[2])continue;
-     if(matches(p,end-i)){if(match){error=L"clothing lookup contract is ambiguous";return nullptr;}match=p;}
+    for(;i+N<=end;++i){auto p=base+begin+i;if(p[0]!=expected[0]||p[1]!=expected[1]||p[2]!=expected[2])continue;
+     bool same=true;for(size_t k=0;k<N;++k)if(fixed[k]&&p[k]!=expected[k]){same=false;break;}
+     if(same&&validate(p,base,nt->OptionalHeader.SizeOfImage)){if(match){error=L"native instruction contract is ambiguous";return nullptr;}match=p;}
     }
    }
    i=end;
   }
  }
- if(!match)error=L"clothing lookup instructions changed; no cosmetic hook was installed";
+ if(!match)error=L"required native instructions changed; hook not installed";
  return match;
 }
+inline void* resolve(std::wstring& error){return resolveCode(code,mask,[](auto*,auto*,size_t){return true;},error);}
 }

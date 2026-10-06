@@ -1,4 +1,5 @@
 #include "Runtime.hpp"
+#include "ScriptEvent.hpp"
 #include <Mod/CppUserModBase.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <Unreal/FFrame.hpp>
@@ -7,6 +8,7 @@
 #include <atomic>
 #include <chrono>
 #include <mutex>
+#include <unordered_map>
 
 namespace Wardrobe {
 Runtime runtime;
@@ -15,6 +17,7 @@ std::atomic_bool opening{};std::atomic_bool configured{};
 std::mutex settingsMutex;Settings requested;
 Ref pendingPlayer,pendingHub;std::atomic_bool active{},hubQueued{};std::mutex hubMutex;uint64_t lastSummary{},saveDue{};
 Ref weaponClass,pawnClass;
+std::unordered_map<UFunction*,ScriptEvent> weaponGraphs;
 bool openAfterAttach{};
 std::vector<Hook::GlobalCallbackId> callbacks;
 struct FunctionHook {Ref fn;std::pair<int,int> ids;};std::vector<FunctionHook> functionHooks;
@@ -37,9 +40,13 @@ void registerFunction(const wchar_t* path,std::function<void(UnrealScriptFunctio
     catch(...){warn(std::wstring(L"Could not register event: ")+path);}
 }
 void scriptPost(UObject* owner,UFunction* fn,void* params,FFrame* frame){
-    // Reuse the existing script callback. The normal miss is just a name check.
+    // Optimized Blueprint events can execute at an entry in the event graph,
+    // bypassing the named wrapper. Match only the reflected completion entry.
     static const FName appearanceEvent(L"OnWeaponAppearanceSet");
-    if(fn&&fn->GetFName()==appearanceEvent&&fn->GetParmsSize()==0){
+    auto graph=weaponGraphs.find(fn);
+    bool completed=fn&&((fn->GetFName()==appearanceEvent&&fn->GetParmsSize()==0)||
+        (graph!=weaponGraphs.end()&&graph->second.matches(fn,params)));
+    if(completed){
         auto cls=static_cast<UClass*>(weaponClass.get());
         if(owner&&cls&&owner->IsA(cls)){
             try{observeWeapon(owner);}catch(const std::exception& error){failure(L"Completed weapon appearance",error);}
@@ -58,7 +65,7 @@ void setup(){
         // No global discovery here. Only player candidates and owned weapons
         // are retained, with deletion-aware identities.
         if(auto cls=static_cast<UClass*>(pawnClass.get());cls&&p->IsA(cls)){auto pc=object(p,L"Controller");if(pc&&object(pc,L"Player"))requestPlayer(p);}
-        else if(auto cls=static_cast<UClass*>(weaponClass.get());cls&&p->IsA(cls))observeWeapon(p);
+        else if(auto cls=static_cast<UClass*>(weaponClass.get());cls&&p->IsA(cls)){watchWeaponEvents(p);observeWeapon(p);}
     },options));
     options.HookName=L"World teardown";
     callbacks.push_back(Hook::RegisterEndPlayPreCallback([](auto&,AActor* actor,EEndPlayReason){if(active&&runtime.player.matches(reinterpret_cast<UObject*>(actor)))resetSession();},options));
@@ -85,6 +92,14 @@ void setup(){
     // ClientRestart/BeginPlay or an explicit open request.
     if(auto controller=UObjectGlobals::FindFirstOf(L"PlayerController"))if(object(controller,L"Player"))requestPlayer(object(controller,L"AcknowledgedPawn"));
 }
+}
+void watchWeaponEvents(UObject* actor){
+    ScriptEvent event;event.bind(actor,L"OnWeaponAppearanceSet");if(!event.graph)return;
+    auto graph=static_cast<UFunction*>(event.graph.get());auto found=weaponGraphs.find(graph);
+    if(found!=weaponGraphs.end()&&found->second.graph.matches(graph))return;
+    std::erase_if(weaponGraphs,[](const auto& pair){return !pair.second.graph;});
+    if(weaponGraphs.size()<64)weaponGraphs[graph]=event;
+    else warn(L"Too many weapon appearance graphs; optimized completion tracking is unavailable for this class.");
 }
 void configure(Settings settings){std::lock_guard lock(settingsMutex);requested=settings;configured=true;}
 void requestOpen(){opening=true;}
@@ -126,7 +141,7 @@ void tick(){
         if(!busy&&ui){operation=L"Wardrobe menu";stepMenu();}
         pollStore();
         if(runtime.dirty){if(!saveDue)saveDue=runtime.now+1500;if(runtime.now>=saveDue){writeStore();saveDue=0;}}else saveDue=0;
-        if(logging){auto elapsed=static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-started).count());runtime.workMicros+=elapsed;runtime.maxWorkMicros=std::max(runtime.maxWorkMicros,elapsed);if(runtime.now-lastSummary>=10000){lastSummary=runtime.now;trace(L"Work totals: catalog steps="+std::to_wstring(runtime.catalogSteps)+L", refreshes="+std::to_wstring(runtime.refreshes)+L", weapon appearance events="+std::to_wstring(runtime.weaponEvents)+L", clothing overrides="+std::to_wstring(runtime.nativeOverrides)+L", inventory snapshots="+std::to_wstring(runtime.inventorySnapshots)+L", inventory entries="+std::to_wstring(runtime.inventoryItems)+L", work us="+std::to_wstring(runtime.workMicros)+L", max tick us="+std::to_wstring(runtime.maxWorkMicros));}}
+        if(logging){auto elapsed=static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-started).count());runtime.workMicros+=elapsed;runtime.maxWorkMicros=std::max(runtime.maxWorkMicros,elapsed);if(runtime.now-lastSummary>=10000){lastSummary=runtime.now;trace(L"Work totals: catalog steps="+std::to_wstring(runtime.catalogSteps)+L", refreshes="+std::to_wstring(runtime.refreshes)+L", weapon appearance events="+std::to_wstring(runtime.weaponEvents)+L", completed character appearances="+std::to_wstring(runtime.appearanceEvents)+L", clothing overrides="+std::to_wstring(runtime.nativeOverrides)+L", inventory snapshots="+std::to_wstring(runtime.inventorySnapshots)+L", inventory entries="+std::to_wstring(runtime.inventoryItems)+L", work us="+std::to_wstring(runtime.workMicros)+L", max tick us="+std::to_wstring(runtime.maxWorkMicros));}}
     }catch(const std::exception& e){
         failure(operation,e);opening=false;openAfterAttach=false;runtime.attachWork.cancel();cancelCosmeticWork();
         try{closeMenu();}catch(const std::exception& closeError){failure(L"Closing failed menu",closeError);}resetMenu();
@@ -137,7 +152,7 @@ void stop(){
     // Teardown never invokes gameplay or UI functions from the loader thread.
     for(auto id:callbacks)Hook::UnregisterCallback(id);callbacks.clear();
     for(auto& hook:functionHooks)if(auto fn=static_cast<UFunction*>(hook.fn.get()))UObjectGlobals::UnregisterHook(fn,hook.ids);functionHooks.clear();
-    shutdownReferences();stopCosmetics();
+    weaponGraphs.clear();shutdownReferences();stopCosmetics();
 }
 }
 using namespace RC;

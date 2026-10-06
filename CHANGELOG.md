@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Prevent floating or duplicate swords when using vampire claws or fists, and reapply saved weapon looks after loading.
+
 - Keep inactive swords hidden when changing weapon looks and clean up old sheath appearances when loading another save.
 
 - Fix drawn swords reverting to their original appearance when the game finishes creating or resets the weapon.

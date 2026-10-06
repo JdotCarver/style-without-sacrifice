@@ -15,7 +15,7 @@ struct Runtime {
     bool menuOpen{},catalogReady{},playerReady{},dirty{},shuttingDown{},persistenceBlocked{};
     unsigned activeSet{};
     std::vector<Look> looks;
-    uint64_t catalogSteps{},refreshes{},nativeOverrides{},weaponEvents{},workMicros{},maxWorkMicros{},inventorySnapshots{},inventoryItems{};
+    uint64_t catalogSteps{},refreshes{},nativeOverrides{},weaponEvents{},appearanceEvents{},workMicros{},maxWorkMicros{},inventorySnapshots{},inventoryItems{};
 };
 extern Runtime runtime;
 void readStore();bool writeStore();void pollStore();void finishStore();bool storePending();
@@ -24,6 +24,7 @@ bool attach(UObject*);bool refresh();
 void beginCatalog();bool stepCatalog();
 void selectLook(Slot,const Choice&);void setDoll(UObject*);
 void observeWeapon(UObject*);
+void watchWeaponEvents(UObject*);
 void initializeMenu();void menuHub(UObject*);void openMenu();void closeMenu();void stepMenu();void resetMenu();
 void menuScriptPre(UObject*,UFunction*,void*,RC::Unreal::Hook::TCallbackIterationData<void>&);
 void menuScriptPost(UObject*,UFunction*,void*,RC::Unreal::FFrame*);
