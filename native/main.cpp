@@ -20,10 +20,17 @@ std::vector<Hook::GlobalCallbackId> callbacks;
 struct FunctionHook {Ref fn;std::pair<int,int> ids;};std::vector<FunctionHook> functionHooks;
 void resetSession(){
     openAfterAttach=false;
-    closeMenu();resetMenu();runtime.attachWork.cancel();runtime.refreshWork.cancel();resetCosmetics();
+    closeMenu();resetMenu();runtime.attachWork.cancel();runtime.refreshWork.cancel();resetCosmetics(true);
     runtime.player={};runtime.controller={};runtime.inventory={};runtime.appearance={};runtime.doll={};runtime.dollAppearance={};runtime.hub={};pendingPlayer={};clearReflection();
 }
-void requestPlayer(UObject* pawn){if(pawn){if(runtime.attachWork.pending&&pendingPlayer.matches(pawn))return;pendingPlayer=Ref(pawn);runtime.attachWork.cancel();runtime.attachWork.request(runtime.now);}}
+void requestPlayer(UObject* pawn){
+    if(!pawn)return;
+    if(runtime.attachWork.pending&&pendingPlayer.matches(pawn))return;
+    // ClientRestart can reuse the pawn across saves. Tear down its preview and
+    // release old visual edits before binding the new inventory/appearance state.
+    if(runtime.player.address){bool reopen=openAfterAttach;resetSession();openAfterAttach=reopen;}
+    pendingPlayer=Ref(pawn);runtime.attachWork.cancel();runtime.attachWork.request(runtime.now);
+}
 void registerFunction(const wchar_t* path,std::function<void(UnrealScriptFunctionCallableContext&,UFunction*)> callback){
     auto fn=static_cast<UFunction*>(find(path));if(!fn){warn(std::wstring(L"Optional event unavailable: ")+path);return;}
     try{auto ids=UObjectGlobals::RegisterHook(fn,{},[callback,fn](UnrealScriptFunctionCallableContext& ctx,void*){if(active)callback(ctx,fn);},nullptr);functionHooks.push_back({Ref(fn),ids});}

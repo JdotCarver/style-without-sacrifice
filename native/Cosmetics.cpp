@@ -39,17 +39,17 @@ std::unordered_map<UObject*,ItemRow> itemLookup;
 struct MeshEdit {Ref component,original,installed;bool visible{},appliedVisible{},changedMesh{},changedVisibility{};std::optional<MeshScale> originalScale,installedScale;};
 std::array<MeshEdit,24> meshEdits;
 void restoreMeshes(){
- for(auto& edit:meshEdits){if(auto component=edit.component.get()){
+ for(auto& edit:meshEdits){try{if(auto component=edit.component.get()){
+  const bool ownsMesh=object(component,L"StaticMesh")==edit.installed.address&&(!edit.installed.address||edit.installed);
   // Restore only our own scale, and only while our mesh still owns it. An
   // equipment refresh or another appearance writer may already have replaced it.
-  if(edit.originalScale&&edit.installedScale&&object(component,L"StaticMesh")==edit.installed.address&&
-     (!edit.installed.address||edit.installed)&&readScale(property(component,L"RelativeScale3D"),component)==edit.installedScale)
+  if(edit.originalScale&&edit.installedScale&&ownsMesh&&readScale(property(component,L"RelativeScale3D"),component)==edit.installedScale)
       writeScale(component,*edit.originalScale);
-  if(edit.changedMesh&&object(component,L"StaticMesh")==edit.installed.address&&(!edit.installed.address||edit.installed)&&(!edit.original.address||edit.original)){Call c(component,L"SetStaticMesh");if(c)c.obj(L"NewMesh",edit.original.get()).invoke();}
-  if(edit.changedVisibility){Call get(component,L"IsVisible");if(get){get.invoke();if((get.resultInteger()!=0)==edit.appliedVisible){Call set(component,L"SetVisibility");set.num(L"bNewVisibility",edit.visible).invoke();}}}
- }edit={};}
+  if(edit.changedMesh&&ownsMesh&&(!edit.original.address||edit.original)){Call c(component,L"SetStaticMesh");if(c)c.obj(L"NewMesh",edit.original.get()).invoke();}
+  if(edit.changedVisibility&&ownsMesh){Call get(component,L"IsVisible");if(get){get.invoke();if((get.resultInteger()!=0)==edit.appliedVisible){Call set(component,L"SetVisibility");set.num(L"bNewVisibility",edit.visible).invoke();}}}
+ }}catch(...){warn(L"A previous weapon appearance could not be restored during cleanup.");}edit={};}
 }
-void editMesh(UObject* component,UObject* replacement,bool changeMesh,bool visible,const MeshScale* scale=nullptr){
+void editMesh(UObject* component,UObject* replacement,bool changeMesh,std::optional<bool> visible,const MeshScale* scale=nullptr){
  if(!component)return;for(auto& e:meshEdits)if(e.component.matches(component))return;
  MeshEdit* entry=nullptr;for(auto& e:meshEdits)if(!e.component){entry=&e;break;}if(!entry)return;
  if(scale){
@@ -60,13 +60,13 @@ void editMesh(UObject* component,UObject* replacement,bool changeMesh,bool visib
    entry->originalScale=original;entry->installedScale=*scale;
   }
  }
- entry->component=Ref(component);entry->original=Ref(object(component,L"StaticMesh"));entry->installed=Ref(replacement);
+ entry->component=Ref(component);entry->original=Ref(object(component,L"StaticMesh"));entry->installed=Ref(changeMesh?replacement:entry->original.get());
  if(changeMesh&&replacement!=entry->original.get()){
   Call set(component,L"SetStaticMesh");if(set)set.obj(L"NewMesh",replacement).invoke();
   entry->changedMesh=object(component,L"StaticMesh")==replacement;
   if(!entry->changedMesh){if(entry->originalScale)writeScale(component,*entry->originalScale);*entry={};warn(L"Weapon mesh could not be replaced; keeping its equipped appearance.");return;}
  }
- Call get(component,L"IsVisible");if(get){get.invoke();entry->visible=get.resultInteger()!=0;entry->changedVisibility=entry->visible!=visible;entry->appliedVisible=visible;if(entry->changedVisibility){Call set(component,L"SetVisibility");set.num(L"bNewVisibility",visible).invoke();}}
+ if(visible){Call get(component,L"IsVisible");if(get){get.invoke();entry->visible=get.resultInteger()!=0;entry->changedVisibility=entry->visible!=*visible;entry->appliedVisible=*visible;if(entry->changedVisibility){Call set(component,L"SetVisibility");set.num(L"bNewVisibility",*visible).invoke();}}}
 }
 std::wstring cleanName(std::wstring name){
     for(auto prefix:{L"ITM_",L"Weapon_",L"Armor_",L"Clothing_"})if(name.starts_with(prefix))name.erase(0,wcslen(prefix));
@@ -114,8 +114,9 @@ UObject* weaponOwner(UObject* actor){
 void weaponAppearance(UObject* actor){
     auto owner=weaponOwner(actor);if(!owner)return;
     auto mesh=object(actor,L"BaseMesh");if(!mesh)return;unsigned set=runtime.doll.matches(owner)?runtime.model.displayedSet:runtime.activeSet;auto& c=runtime.model.sets[set][4];
-    // Hidden applies to the sheathed weapon; drawn weapons remain visible.
-    if(runtime.settings.enabled&&c.mode==Choice::Mode::Look&&weaponMesh[set]&&weaponScale[set])editMesh(mesh,weaponMesh[set].get(),true,true,&*weaponScale[set]);
+    // Leave draw/sheath and pooled-weapon visibility under game control.
+    // A remembered inactive weapon must never be revealed by changing its look.
+    if(runtime.settings.enabled&&c.mode==Choice::Mode::Look&&weaponMesh[set]&&weaponScale[set])editMesh(mesh,weaponMesh[set].get(),true,std::nullopt,&*weaponScale[set]);
 }
 bool prepareHiddenRow(UScriptStruct* type,unsigned slot,OwnedRow& row){
     if(slot!=static_cast<unsigned>(Slot::Gauntlets))return true;
@@ -210,12 +211,20 @@ bool startCosmetics(){
     started=true;return true;
 }
 void stopCosmetics(){started=false;if(rowTarget){MH_DisableHook(rowTarget);MH_RemoveHook(rowTarget);rowTarget=nullptr;}resetCosmetics();}
-void resetCosmetics(){meshEdits={};preparedChoices={};inventoryDirty=true;inventorySnapshot.reset();inventorySystem={};addedItems.clear();inventoryCursor=0;inventoryDue=0;runtime.playerRefresh=runtime.previewRefresh=false;for(auto& set:overrides)for(auto& row:set)row.reset();subsystem={};clothingTable={};weaponTable={};rowType={};weaponType={};slotProperty=nullptr;weapons={};weaponMesh={};scabbardMesh={};weaponScale={};catalogStarted=false;runtime.catalogReady=runtime.playerReady=false;runtime.looks.clear();itemLookup.clear();lastLoadoutFrame=~0ull;}
+void resetCosmetics(bool restore){
+    // Game-thread context changes release owned edits before forgetting them.
+    // Loader-thread shutdown passes false and never invokes engine functions.
+    if(restore){
+        if(logging){unsigned count=0;for(const auto& edit:meshEdits)if(edit.component)++count;
+            if(count)trace(L"Releasing weapon appearance edits for player context: "+std::to_wstring(count));}
+        restoreMeshes();
+    }
+    meshEdits={};preparedChoices={};inventoryDirty=true;inventorySnapshot.reset();inventorySystem={};addedItems.clear();inventoryCursor=0;inventoryDue=0;runtime.playerRefresh=runtime.previewRefresh=false;for(auto& set:overrides)for(auto& row:set)row.reset();subsystem={};clothingTable={};weaponTable={};rowType={};weaponType={};slotProperty=nullptr;weapons={};weaponMesh={};scabbardMesh={};weaponScale={};catalogStarted=false;runtime.catalogReady=runtime.playerReady=false;runtime.looks.clear();itemLookup.clear();lastLoadoutFrame=~0ull;}
 void cancelCosmeticWork(){catalogStarted=false;inventoryDirty=false;addedItems.clear();inventorySnapshot.reset();runtime.refreshWork.cancel();runtime.playerRefresh=runtime.previewRefresh=false;}
 bool attach(UObject* pawn){
     if(!pawn)return false;auto controller=object(pawn,L"Controller");if(!controller||!object(controller,L"Player"))return false;
     auto inv=object(pawn,L"InventoryComponent"),app=object(pawn,L"AppearanceComponent");if(!inv||!app)return false;
-    if(!runtime.player.matches(pawn)){resetCosmetics();runtime.player=Ref(pawn);runtime.controller=Ref(controller);runtime.inventory=Ref(inv);runtime.appearance=Ref(app);runtime.doll={};runtime.dollAppearance={};}
+    if(runtime.playerReady||!runtime.player.matches(pawn)||!runtime.inventory.matches(inv)||!runtime.appearance.matches(app)){resetCosmetics(true);runtime.player=Ref(pawn);runtime.controller=Ref(controller);runtime.inventory=Ref(inv);runtime.appearance=Ref(app);runtime.doll={};runtime.dollAppearance={};}
     if(!tables(pawn))return false;beginCatalog();runtime.activeSet=loadout();runtime.model.switchSet(runtime.activeSet);runtime.playerReady=true;requestRefresh();if(logging)trace(L"Attached player: "+pawn->GetName());return true;
 }
 void beginCatalog(){if(catalogStarted||!clothingTable)return;catalogStarted=true;tablePhase=tableCursor=0;expectedRows=table(false)->GetRowMap().Num();runtime.looks.clear();itemLookup.clear();runtime.catalogReady=false;}
@@ -349,7 +358,7 @@ bool refresh(){
             auto sheathed=object(owner,doll?L"WeaponMesh":L"SheathedWeaponMesh");auto scabbard=object(owner,L"Scabbard");
             if(!scabbard)scabbard=object(owner,L"ScabbardMesh");
             if(choice.mode==Choice::Mode::Hidden){editMesh(sheathed,nullptr,false,false);editMesh(scabbard,nullptr,false,false);}
-            else if(choice.mode==Choice::Mode::Look&&weaponMesh[set]&&weaponScale[set]){editMesh(sheathed,weaponMesh[set].get(),true,true,&*weaponScale[set]);editMesh(scabbard,scabbardMesh[set].get(),true,bool(scabbardMesh[set]),&*weaponScale[set]);}
+            else if(choice.mode==Choice::Mode::Look&&weaponMesh[set]&&weaponScale[set]){editMesh(sheathed,weaponMesh[set].get(),true,std::nullopt,&*weaponScale[set]);editMesh(scabbard,scabbardMesh[set].get(),true,bool(scabbardMesh[set]),&*weaponScale[set]);}
         }
         for(auto& w:weapons)if(auto actor=w.get())weaponAppearance(actor);
         runtime.playerRefresh=runtime.previewRefresh=false;if(logging)++runtime.refreshes;insideRefresh=false;return true;

@@ -19,7 +19,7 @@ struct Runtime {
 };
 extern Runtime runtime;
 void readStore();bool writeStore();void pollStore();void finishStore();bool storePending();
-bool startCosmetics();void stopCosmetics();void resetCosmetics();
+bool startCosmetics();void stopCosmetics();void resetCosmetics(bool restore=false);
 bool attach(UObject*);bool refresh();
 void beginCatalog();bool stepCatalog();
 void selectLook(Slot,const Choice&);void setDoll(UObject*);
