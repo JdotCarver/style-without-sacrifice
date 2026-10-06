@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Reduce repeated catalog and menu object searches, and spread weapon-item discovery across frames.
 - Keep the selected weapon and scabbard appearance throughout consumable animations, including repeated drinks, while preserving normal visibility and original weapon sizing.
 
 ## 1.0.1

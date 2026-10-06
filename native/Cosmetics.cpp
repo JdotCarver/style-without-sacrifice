@@ -4,6 +4,7 @@
 #include "SheathContract.hpp"
 #include "CatalogOrder.hpp"
 #include "WeaponScale.hpp"
+#include "Performance.hpp"
 #include <Windows.h>
 #include <MinHook.h>
 #include <array>
@@ -12,6 +13,7 @@
 #include <chrono>
 #include <unordered_map>
 #include <deque>
+#include <Unreal/UObjectArray.hpp>
 
 namespace Wardrobe {
 namespace {
@@ -39,6 +41,8 @@ std::array<Ref,8> weapons;
 std::array<Ref,2> weaponMesh,scabbardMesh;
 std::array<std::optional<MeshScale>,2> weaponScale;
 unsigned tablePhase{},tableCursor{};int expectedRows{};uint64_t lastLoadoutFrame=~0ull;
+unsigned itemCursor{},itemLimit{};bool itemsIndexed{};
+std::map<std::wstring,Ref> catalogItems;
 bool catalogStarted{},insideRefresh{},started{};
 std::array<std::array<std::optional<Choice>,5>,2> preparedChoices;
 bool inventoryDirty=true;
@@ -110,6 +114,7 @@ void* clothingRow(UObject* item,UObject* context){
     return result;
 }
 UObject* loadAsset(FProperty* source,void* data){
+    MeasureOperation timing(Operation::AssetLoad);
     if(!source||!data)return nullptr;
     if(source->IsA<FObjectPropertyBase>()&&!source->IsA<FSoftObjectProperty>())return readObject(source,data);
     Call c(find(L"/Script/Engine.Default__KismetSystemLibrary"),L"LoadAsset_Blocking");if(!c)return nullptr;auto target=c.field(L"Asset");
@@ -373,12 +378,33 @@ void resetCosmetics(bool restore){
     meshEdits={};preparedChoices={};inventoryDirty=true;inventorySnapshot.reset();inventorySystem={};addedItems.clear();inventoryCursor=0;inventoryDue=0;runtime.playerRefresh=runtime.previewRefresh=false;for(auto& set:overrides)for(auto& row:set)row.reset();subsystem={};clothingTable={};weaponTable={};rowType={};weaponType={};slotProperty=nullptr;weapons={};weaponMesh={};scabbardMesh={};weaponScale={};catalogStarted=false;runtime.catalogReady=runtime.playerReady=false;runtime.looks.clear();itemLookup.clear();lastLoadoutFrame=~0ull;}
 void cancelCosmeticWork(){catalogStarted=false;inventoryDirty=false;addedItems.clear();inventorySnapshot.reset();runtime.refreshWork.cancel();runtime.playerRefresh=runtime.previewRefresh=false;}
 bool attach(UObject* pawn){
+    MeasureOperation timing(Operation::Attach);
     if(!pawn)return false;auto controller=object(pawn,L"Controller");if(!controller||!object(controller,L"Player"))return false;
     auto inv=object(pawn,L"InventoryComponent"),app=object(pawn,L"AppearanceComponent");if(!inv||!app)return false;
     if(runtime.playerReady||!runtime.player.matches(pawn)||!runtime.inventory.matches(inv)||!runtime.appearance.matches(app)){resetCosmetics(true);runtime.player=Ref(pawn);runtime.controller=Ref(controller);runtime.inventory=Ref(inv);runtime.appearance=Ref(app);runtime.doll={};runtime.dollAppearance={};}
     if(!tables(pawn))return false;bindSheath(pawn);beginCatalog();runtime.activeSet=loadout();runtime.model.switchSet(runtime.activeSet);runtime.playerReady=true;requestRefresh();if(logging)trace(L"Attached player: "+pawn->GetName());return true;
 }
-void beginCatalog(){if(catalogStarted||!clothingTable)return;catalogStarted=true;tablePhase=tableCursor=0;expectedRows=table(false)->GetRowMap().Num();runtime.looks.clear();itemLookup.clear();runtime.catalogReady=false;}
+void beginCatalog(){if(catalogStarted||!clothingTable)return;catalogStarted=true;tablePhase=tableCursor=0;itemCursor=itemLimit=0;itemsIndexed=false;catalogItems.clear();expectedRows=table(false)->GetRowMap().Num();runtime.looks.clear();itemLookup.clear();runtime.catalogReady=false;}
+bool indexCatalogItems(){
+    MeasureOperation timing(Operation::CatalogIndex);
+    if(itemsIndexed)return true;
+    auto weapons=table(true);if(!weapons){itemsIndexed=true;return true;}
+    if(!itemLimit)itemLimit=static_cast<unsigned>(std::max(0,FUObjectArray::GetNumElements()));
+    const auto start=std::chrono::steady_clock::now();unsigned count=0;
+    // One bounded pass replaces one global name search for every weapon row.
+    // Only inspect live slots on the game thread; retained objects use Ref.
+    while(itemCursor<itemLimit&&count++<2048){
+        auto slot=FUObjectArray::IndexToObject(static_cast<int>(itemCursor++));
+        if(slot&&FUObjectArray::IsValid(slot,false))if(auto item=slot->GetUObject()){
+            if(weapons->GetRowMap().Find(item->GetFName())){
+                auto name=item->GetName();auto path=L"/Game/_Dawnwalker/Inventory/Items/"+name+L"."+name;
+                if(item->GetPathName()==path)catalogItems[name]=Ref(item);
+            }
+        }
+        if(count%32==0&&std::chrono::steady_clock::now()-start>std::chrono::microseconds(500))break;
+    }
+    itemsIndexed=itemCursor>=itemLimit;return itemsIndexed;
+}
 bool hasPreviewIcon(UObject* item){
     if(!item)return false;auto p=property(item,L"ItemImage");if(!p)return false;
     if(p->IsA<FSoftObjectProperty>()){
@@ -405,19 +431,21 @@ std::string lookSortKey(const std::wstring& name){
     return key;
 }
 bool stepCatalog(){
+    MeasureOperation timing(Operation::Catalog);
     if(!catalogStarted||runtime.catalogReady)return true;
     auto complete=[] {std::sort(runtime.looks.begin(),runtime.looks.end(),lookOrder<Look>);runtime.catalogReady=true;inventoryDirty=true;menuRedraw();};
     auto t=table(tablePhase==1);if(!t){catalogStarted=false;if(tablePhase==1)complete();return true;}
     auto type=static_cast<UScriptStruct*>((tablePhase==1?weaponType:rowType).get());if(!type){catalogStarted=false;warn(L"Appearance catalog type is no longer available; reopen Wardrobe after loading.");return true;}
     auto& rows=t->GetRowMap();if(rows.Num()>16384||rows.GetMaxIndex()>32768){warn(L"Appearance catalog exceeds the supported safety limit.");catalogStarted=false;return true;}
     if(rows.Num()!=expectedRows){catalogStarted=false;beginCatalog();return false;}
+    if(tablePhase==1&&!itemsIndexed){indexCatalogItems();return false;}
     unsigned count=0;auto start=std::chrono::steady_clock::now();
     while(tableCursor<static_cast<unsigned>(rows.GetMaxIndex())&&count++<16){
         auto id=FSetElementId::FromInteger(tableCursor++);if(!rows.IsValidId(id))continue;const auto& pair=rows.Get(id);auto row=pair.Value;if(!row)continue;
         int slot=tablePhase?4:slotFor(row);if(slot<0)continue;
         Look look{static_cast<Slot>(slot),pair.Key.ToString(),{}, {}};look.label=cleanName(look.row);
         auto item=readObject(property(type,L"Item"),row);
-        if(!item&&tablePhase==1){auto path=L"/Game/_Dawnwalker/Inventory/Items/"+look.row+L"."+look.row;item=find(path.c_str());}
+        if(!item&&tablePhase==1){auto found=catalogItems.find(look.row);if(found!=catalogItems.end())item=found->second.get();}
         if(item){look.item=Ref(item);look.itemPath=item->GetPathName();auto name=text(property(item,L"ItemName"),item);if(!name.empty())look.label=name;itemLookup[item]={look.item,look.row};}
         look.hasPreviewIcon=hasPreviewIcon(item);look.sortKey=lookSortKey(look.label);
         runtime.looks.push_back(std::move(look));
@@ -496,6 +524,7 @@ void stepInventory(){
     if(inventoryCursor>=static_cast<unsigned>(helper.Num()))inventorySnapshot.reset();
 }
 bool refresh(){
+    MeasureOperation timing(Operation::Refresh);
     if(insideRefresh)return true;auto app=runtime.appearance.get();if(!app)return false;
     insideRefresh=true;
     try{

@@ -53,6 +53,7 @@ EXPORTS
     ?GetNamePrivate@UObjectBase@Unreal@RC@@QEBAAEBVFName@23@XZ
     ?GetNext@UField@Unreal@RC@@QEAAAEAV?$TObjectPtr@VUField@Unreal@RC@@@23@XZ
     ?GetNextFFieldUnsafe@FField@Unreal@RC@@AEAAPEAV123@XZ
+    ?GetNumElements@FUObjectArray@Unreal@RC@@SAHXZ
     ?GetNumParms@UFunction@Unreal@RC@@QEAAAEAEXZ
     ?GetObjectPropertyValue@FObjectPropertyBase@Unreal@RC@@QEBAPEAVUObject@23@PEBX@Z
     ?GetOffset_Internal@FProperty@Unreal@RC@@QEBAAEBHXZ

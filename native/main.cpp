@@ -1,4 +1,5 @@
 #include "Runtime.hpp"
+#include "Performance.hpp"
 #include "ScriptEvent.hpp"
 #include <Mod/CppUserModBase.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
@@ -111,6 +112,7 @@ void tick(){
     runtime.now=GetTickCount64();
     auto started=logging?std::chrono::steady_clock::now():std::chrono::steady_clock::time_point{};
     const wchar_t* operation=L"Event processing";
+    const auto previousSummary=lastSummary;
     try{
         if(hubQueued.exchange(false)){Ref h;{std::lock_guard lock(hubMutex);h=pendingHub;pendingHub={};}if(auto p=h.get())menuHub(p);}
         if(apply){Settings s;{std::lock_guard lock(settingsMutex);s=requested;}bool changed=runtime.settings.enabled!=s.enabled;if(!logging&&s.debugLogging)started=std::chrono::steady_clock::now();runtime.settings=s;logging=s.debugLogging;if(changed){if(!s.enabled)closeMenu();requestRefresh();}if(logging)trace(s.enabled?L"Settings applied: enabled.":L"Settings applied: disabled.");}
@@ -142,6 +144,10 @@ void tick(){
         pollStore();
         if(runtime.dirty){if(!saveDue)saveDue=runtime.now+1500;if(runtime.now>=saveDue){writeStore();saveDue=0;}}else saveDue=0;
         if(logging){auto elapsed=static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-started).count());runtime.workMicros+=elapsed;runtime.maxWorkMicros=std::max(runtime.maxWorkMicros,elapsed);if(runtime.now-lastSummary>=10000){lastSummary=runtime.now;trace(L"Work totals: catalog steps="+std::to_wstring(runtime.catalogSteps)+L", refreshes="+std::to_wstring(runtime.refreshes)+L", weapon appearance events="+std::to_wstring(runtime.weaponEvents)+L", completed character appearances="+std::to_wstring(runtime.appearanceEvents)+L", immediate appearances="+std::to_wstring(runtime.immediateAppearances)+L", appearance us="+std::to_wstring(runtime.appearanceMicros)+L", max appearance us="+std::to_wstring(runtime.maxAppearanceMicros)+L", sheath writes="+std::to_wstring(runtime.sheathWrites)+L", sheath write us="+std::to_wstring(runtime.sheathMicros)+L", max sheath write us="+std::to_wstring(runtime.maxSheathMicros)+L", clothing overrides="+std::to_wstring(runtime.nativeOverrides)+L", inventory snapshots="+std::to_wstring(runtime.inventorySnapshots)+L", inventory entries="+std::to_wstring(runtime.inventoryItems)+L", work us="+std::to_wstring(runtime.workMicros)+L", max tick us="+std::to_wstring(runtime.maxWorkMicros));}}
+        if(logging&&lastSummary!=previousSummary){
+            constexpr const wchar_t* names[]={L"attachment",L"catalog",L"catalog index",L"asset load",L"refresh",L"menu",L"open"};
+            for(size_t i=0;i<operationTimings.size();++i){const auto& t=operationTimings[i];if(t.count)trace(std::wstring(L"Operation totals (nested, do not sum): ")+names[i]+L", calls="+std::to_wstring(t.count)+L", us="+std::to_wstring(t.micros)+L", max us="+std::to_wstring(t.maximum));}
+        }
     }catch(const std::exception& e){
         failure(operation,e);opening=false;openAfterAttach=false;runtime.attachWork.cancel();cancelCosmeticWork();
         try{closeMenu();}catch(const std::exception& closeError){failure(L"Closing failed menu",closeError);}resetMenu();

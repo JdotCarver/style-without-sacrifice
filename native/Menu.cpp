@@ -1,4 +1,5 @@
 #include "Runtime.hpp"
+#include "Performance.hpp"
 #include "ScriptEvent.hpp"
 #include "MenuWidgets.hpp"
 #include "MenuInput.hpp"
@@ -347,6 +348,7 @@ void menuScriptPost(UObject* owner,UFunction* fn,void* params,FFrame* frame){
     }
 }
 void openMenu(){
+    MeasureOperation timing(Operation::Open);
     if(!runtime.player)return;wantsOpen=true;
     // The normal hub owns pause/input and navigation. Its creation event then
     // injects the Wardrobe button and selects this page.
@@ -373,6 +375,7 @@ void resetMenu(){
     if(auto p=oldPage.get())try{call(p,L"RemoveFromParent");}catch(const std::exception& e){failure(L"Removing Wardrobe page",e);}
 }
 void stepMenu(){
+    MeasureOperation timing(Operation::Menu);
     if(injection.ready(runtime.now)){auto ok=inject();injection.finish(ok,runtime.now);if(!ok&&!injection.pending){wantsOpen=false;warn(L"Wardrobe tab could not be added to this hub layout.");}return;}
     if(wantsOpen&&!injection.pending){if(!tabButton)throw std::runtime_error("Wardrobe tab was removed before opening");show();}
     if(!runtime.menuOpen)return;if(!page||!runtime.hub){runtime.menuOpen=false;stopPreview();resetMenu();return;}

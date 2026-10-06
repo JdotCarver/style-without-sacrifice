@@ -61,3 +61,9 @@ Source is maintained at [my-mods/style-without-sacrifice](https://github.com/my-
 Credit to **RyroNZ**, author of [Dawnwalker Wardrobe (Transmog)](https://www.nexusmods.com/thebloodofdawnwalker/mods/237), for the original Wardrobe/transmog idea. **MIK**'s [Transmog - Your Look Your Choice](https://www.nexusmods.com/thebloodofdawnwalker/mods/353) also inspired the feature set.
 
 This mod is an independent implementation. **Not a single line of code from either author's mod was copied into this project.** Separately, this project uses the RE-UE4SS SDK, MinHook, fmt and the provided Mod Setting Menu integration helper; see [third-party notices](THIRD-PARTY-NOTICES.md).
+
+## Performance and diagnostics
+
+Wardrobe reuses deletion-aware references to loaded helpers and UI classes. Weapon catalog discovery runs in bounded slices; equipped appearances still refresh before optional catalog work. Asset loading remains synchronous when an appearance is first needed. Logging adds per-operation counts, total time and maximum time for attachment, catalog work, asset loading, refresh and menu work. These nested measurements overlap and must not be added together.
+
+Enable the final **Logging** setting for diagnostics in `Dawnwalker/Binaries/Win64/ue4ss/UE4SS.log`. Leave it Off for normal play. Timings and offline checks do not establish an in-game frame-rate improvement.

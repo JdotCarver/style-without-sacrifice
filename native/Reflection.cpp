@@ -1,4 +1,5 @@
 #include "Reflection.hpp"
+#include "Performance.hpp"
 #include <DynamicOutput/Output.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <array>
@@ -28,6 +29,7 @@ struct PropertyBinding {Ref owner;FProperty* field{};};
 struct FunctionBinding {Ref owner;Ref function;};
 std::map<std::pair<UStruct*,std::wstring>,PropertyBinding> fields;
 std::map<std::pair<UObject*,std::wstring>,FunctionBinding> functions;
+std::map<std::wstring,Ref> objects;
 std::set<std::wstring> warnings;
 }
 void warn(const std::wstring& s){if(warnings.size()<64&&warnings.insert(s).second)RC::Output::send(L"[WardrobeTransmog] "+s+L"\n");}
@@ -38,7 +40,7 @@ void failure(const wchar_t* action,const std::exception& error){
 }
 void initializeReferences(){if(!alive.exchange(true))FUObjectArray::AddUObjectDeleteListener(&listener);}
 void shutdownReferences(){if(alive.exchange(false))FUObjectArray::RemoveUObjectDeleteListener(&listener);std::lock_guard lock(lifeMutex);for(auto& [index,value]:lives)if(auto life=value.lock())life->alive=false;lives.clear();}
-void clearReflection(){fields.clear();functions.clear();warnings.clear();}
+void clearReflection(){fields.clear();functions.clear();objects.clear();warnings.clear();}
 Ref::Ref(UObject* p){
     if(!alive||!p)return;auto i=p->GetInternalIndex();if(i<0)return;
     auto item=FUObjectArray::IndexToObject(i);
@@ -67,8 +69,18 @@ UFunction* function(UObject* owner,const std::wstring& n){
     auto it=functions.find(key);if(it!=functions.end()&&it->second.owner.matches(cls))return static_cast<UFunction*>(it->second.function.get());
     auto fn=owner->GetFunctionByNameInChain(n.c_str());if(functions.size()<2048)functions[key]={Ref(cls),Ref(fn)};return fn;
 }
-UObject* find(const wchar_t* path){return UObjectGlobals::StaticFindObject<UObject*>(nullptr,nullptr,path);}
+UObject* find(const wchar_t* path){
+    if(!path)return nullptr;
+    auto it=objects.find(path);
+    if(it!=objects.end()){if(auto value=it->second.get())return value;objects.erase(it);}
+    auto value=UObjectGlobals::StaticFindObject<UObject*>(nullptr,nullptr,path);
+    // A miss is not retained: assets can become available later in this world.
+    // Ref invalidates on deletion, including zero-serial address/index reuse.
+    if(value&&objects.size()<2048)objects.emplace(path,Ref(value));
+    return value;
+}
 UObject* asset(const wchar_t* path){
+    MeasureOperation timing(Operation::AssetLoad);
     if(auto loaded=find(path))return loaded;
     Call c(find(L"/Script/Engine.Default__KismetSystemLibrary"),L"LoadAsset_Blocking");
     if(!c)return nullptr;auto p=c.field(L"Asset");
