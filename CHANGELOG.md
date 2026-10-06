@@ -3,11 +3,8 @@
 ## 1.0.1
 
 - Fix greatsword appearances shrinking to one-handed size while drawn or sheathed, including scabbards and character previews.
-- Correct the demo greatsword size and restore the sacrificial knife appearance.
 - Keep selected weapon appearances when drawing a sword and after loading a save.
 - Prevent floating or duplicate swords when switching between swords and vampire claws or fists.
-- Keep inactive swords hidden when changing looks and remove old sheath appearances when switching saves.
-- Correct [DB] Heavy Weapon to use a pickaxe instead of a cart.
 
 ## 1.0
 
