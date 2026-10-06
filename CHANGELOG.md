@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Prevent weapon and scabbard appearances briefly reverting when consuming an item.
+- Keep the selected weapon and scabbard appearance throughout consumable animations, including repeated drinks, while preserving normal visibility and original weapon sizing.
 
 ## 1.0.1
 

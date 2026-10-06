@@ -1,6 +1,7 @@
 #include "Runtime.hpp"
 #include "NativeContract.hpp"
 #include "AppearanceCompletion.hpp"
+#include "SheathContract.hpp"
 #include "CatalogOrder.hpp"
 #include "WeaponScale.hpp"
 #include <Windows.h>
@@ -18,6 +19,12 @@ using RowGetter=void*(*)(UObject*,UObject*);
 RowGetter originalRow{};void* rowTarget{};DWORD threadId{};
 using AppearanceReady=void(*)(UObject*);
 AppearanceReady originalAppearanceReady{};void* appearanceReadyTarget{};
+using SheathWeapon=void(*)(void*,UObject*,const MeshScale*);
+using SheathScabbard=void(*)(void*,UObject*);
+using SheathVisibility=void(*)(void*,bool);
+SheathWeapon originalSheathWeapon{};SheathScabbard originalSheathScabbard{};
+SheathVisibility originalSheathWeaponVisibility{},originalSheathScabbardVisibility{};
+std::array<void*,4> sheathTargets{};bool sheathBound{};
 Ref subsystem,clothingTable,weaponTable,rowType,weaponType;
 Ref inventorySystem;
 std::deque<uint32_t> addedItems;
@@ -154,22 +161,77 @@ void weaponAppearance(UObject* actor){
     if(runtime.settings.enabled&&c.mode==Choice::Mode::Look&&weaponMesh[set]&&weaponScale[set])editMesh(mesh,weaponMesh[set].get(),true,std::nullopt,&*weaponScale[set]);
     else releaseMesh(mesh);
 }
-void sheathedAppearance(UObject* owner,bool doll){
+void sheathedAppearance(UObject* owner,bool doll,bool preserveVisibility=false){
     if(!owner||!runtime.settings.enabled)return;
     unsigned set=doll?runtime.model.displayedSet:runtime.activeSet;auto& choice=runtime.model.sets[set][4];
     auto sheathed=object(owner,doll?L"WeaponMesh":L"SheathedWeaponMesh");auto scabbard=object(owner,L"Scabbard");
     if(!scabbard)scabbard=object(owner,L"ScabbardMesh");
     if(choice.mode==Choice::Mode::Hidden){editMesh(sheathed,nullptr,false,false);editMesh(scabbard,nullptr,false,false);}
-    else if(choice.mode==Choice::Mode::Look&&weaponMesh[set]&&weaponScale[set]){editMesh(sheathed,weaponMesh[set].get(),true,std::nullopt,&*weaponScale[set]);editMesh(scabbard,scabbardMesh[set].get(),true,bool(scabbardMesh[set]),&*weaponScale[set]);}
+    else if(choice.mode==Choice::Mode::Look&&weaponMesh[set]&&weaponScale[set]){editMesh(sheathed,weaponMesh[set].get(),true,std::nullopt,&*weaponScale[set]);editMesh(scabbard,scabbardMesh[set].get(),true,preserveVisibility&&scabbardMesh[set]?std::nullopt:std::optional<bool>(bool(scabbardMesh[set])),&*weaponScale[set]);}
     else {releaseMesh(sheathed);releaseMesh(scabbard);}
+}
+void bindSheath(UObject* pawn){
+    sheathBound=false;if(!sheathTargets[0])return;
+    auto weapon=property(pawn,L"SheathedWeaponMesh"),scabbard=property(pawn,L"ScabbardMesh");
+    auto valid=[](FProperty* p){return p&&p->IsA<FObjectProperty>()&&p->GetSize()==sizeof(void*);};
+    if(valid(weapon)&&valid(scabbard)&&SheathContract::interfaceMatches(pawn,pawn->GetClassPrivate()->GetPropertiesSize(),
+       static_cast<const FProperty*>(weapon)->GetOffset_Internal(),static_cast<const FProperty*>(scabbard)->GetOffset_Internal(),sheathTargets))sheathBound=true;
+    if(!sheathBound)warn(L"Player sheath layout changed; immediate sheath protection is unavailable.");
+    else if(logging)trace(L"Player weapon, scabbard and visibility setters bound for immediate appearance protection.");
+}
+struct SheathWrite {
+    UObject* pawn{};std::chrono::steady_clock::time_point began{};
+    explicit SheathWrite(void* context){
+        if(!started||GetCurrentThreadId()!=threadId||insideRefresh||!sheathBound||!runtime.settings.enabled||
+           reinterpret_cast<uintptr_t>(context)!=reinterpret_cast<uintptr_t>(runtime.player.address)+SheathContract::interfaceOffset)return;
+        pawn=runtime.player.get();if(!pawn)return;
+        insideRefresh=true;if(logging){began=std::chrono::steady_clock::now();++runtime.sheathWrites;}
+        // A scabbard-only write copies the weapon's current scale. Release our
+        // edits first so that stock code sees equipped values, not the selected
+        // look's scale. Both meshes are repaired within the same native call.
+        try{releaseMesh(object(pawn,L"SheathedWeaponMesh"));releaseMesh(object(pawn,L"ScabbardMesh"));}
+        catch(const std::exception& error){failure(L"Preparing player sheath write",error);}
+    }
+    ~SheathWrite(){
+        if(!pawn)return;
+        try{if(runtime.player.matches(pawn)){
+            runtime.activeSet=loadout();auto set=runtime.activeSet;const auto& choice=runtime.model.sets[set][4];
+            if(preparedChoices[set][4]!=choice||(choice.mode==Choice::Mode::Look&&
+               (!weaponMesh[set]||!weaponScale[set]||(scabbardMesh[set].address&&!scabbardMesh[set])))){
+                preparedChoices[set][4].reset();requestRefresh(false,false);
+            }else sheathedAppearance(pawn,false,true);
+        }}catch(const std::exception& error){requestRefresh(false,false);failure(L"Restoring player sheath write",error);}
+        insideRefresh=false;
+        if(logging){auto elapsed=static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-began).count());
+            runtime.sheathMicros+=elapsed;runtime.maxSheathMicros=std::max(runtime.maxSheathMicros,elapsed);}
+    }
+};
+void sheathWeapon(void* context,UObject* mesh,const MeshScale* scale){SheathWrite repair(context);originalSheathWeapon(context,mesh,scale);}
+void sheathScabbard(void* context,UObject* mesh){SheathWrite repair(context);originalSheathScabbard(context,mesh);}
+void sheathWeaponVisibility(void* context,bool visible){SheathWrite repair(context);originalSheathWeaponVisibility(context,visible);}
+void sheathScabbardVisibility(void* context,bool visible){SheathWrite repair(context);originalSheathScabbardVisibility(context,visible);}
+void stopSheathHooks(){
+    sheathBound=false;
+    for(auto& target:sheathTargets)if(target){MH_DisableHook(target);MH_RemoveHook(target);target=nullptr;}
+}
+void startSheathHooks(){
+    std::wstring error;auto targets=SheathContract::resolve(error);
+    if(!targets[0]){warn(L"Immediate sheath protection unavailable: "+error);return;}
+    std::array<void*,4> hooks{reinterpret_cast<void*>(sheathWeapon),reinterpret_cast<void*>(sheathWeaponVisibility),reinterpret_cast<void*>(sheathScabbard),reinterpret_cast<void*>(sheathScabbardVisibility)};
+    std::array<void**,4> originals{reinterpret_cast<void**>(&originalSheathWeapon),reinterpret_cast<void**>(&originalSheathWeaponVisibility),reinterpret_cast<void**>(&originalSheathScabbard),reinterpret_cast<void**>(&originalSheathScabbardVisibility)};
+    for(size_t i=0;i<targets.size();++i){
+        if(MH_CreateHook(targets[i],hooks[i],originals[i])!=MH_OK){stopSheathHooks();warn(L"A player sheath setter is already modified or cannot be hooked.");return;}
+        sheathTargets[i]=targets[i];
+    }
+    for(auto target:sheathTargets)if(MH_EnableHook(target)!=MH_OK){stopSheathHooks();warn(L"Player sheath protection could not be enabled.");return;}
 }
 void appearanceCompleted(UObject* app){
     if(!started||GetCurrentThreadId()!=threadId||insideRefresh||
        (!runtime.appearance.matches(app)&&!runtime.dollAppearance.matches(app)))return;
     if(logging)++runtime.appearanceEvents;
     if(!runtime.settings.enabled)return;
-    // Stock inventory changes (including consumption) rebuild the sheathed
-    // meshes. Repair cached looks before returning to the engine, rather than
+    // Character rebuilds replace the sheathed meshes independently of the
+    // combat sheath setters. Repair cached looks before returning, rather than
     // exposing the equipped look until a later EngineTickPost continuation.
     // Asset loading and failed preparation stay in the bounded worker.
     bool doll=runtime.dollAppearance.matches(app);
@@ -285,6 +347,7 @@ bool tables(UObject* pawn){
 bool startCosmetics(){
     threadId=GetCurrentThreadId();std::wstring error;
     auto initialized=MH_Initialize();if(initialized!=MH_OK&&initialized!=MH_ERROR_ALREADY_INITIALIZED){warn(L"Native hook service unavailable.");return false;}
+    startSheathHooks();
     appearanceReadyTarget=AppearanceCompletion::resolve(error);
     if(appearanceReadyTarget){
         if(MH_CreateHook(appearanceReadyTarget,reinterpret_cast<void*>(appearanceReady),reinterpret_cast<void**>(&originalAppearanceReady))!=MH_OK){warn(L"Appearance completion is already modified or cannot be hooked.");appearanceReadyTarget=nullptr;}
@@ -297,8 +360,9 @@ bool startCosmetics(){
     if(MH_EnableHook(rowTarget)!=MH_OK){MH_RemoveHook(rowTarget);rowTarget=nullptr;return false;}
     started=true;return true;
 }
-void stopCosmetics(){started=false;if(appearanceReadyTarget){MH_DisableHook(appearanceReadyTarget);MH_RemoveHook(appearanceReadyTarget);appearanceReadyTarget=nullptr;}if(rowTarget){MH_DisableHook(rowTarget);MH_RemoveHook(rowTarget);rowTarget=nullptr;}resetCosmetics();}
+void stopCosmetics(){started=false;stopSheathHooks();if(appearanceReadyTarget){MH_DisableHook(appearanceReadyTarget);MH_RemoveHook(appearanceReadyTarget);appearanceReadyTarget=nullptr;}if(rowTarget){MH_DisableHook(rowTarget);MH_RemoveHook(rowTarget);rowTarget=nullptr;}resetCosmetics();}
 void resetCosmetics(bool restore){
+    sheathBound=false;
     // Game-thread context changes release owned edits before forgetting them.
     // Loader-thread shutdown passes false and never invokes engine functions.
     if(restore){
@@ -312,7 +376,7 @@ bool attach(UObject* pawn){
     if(!pawn)return false;auto controller=object(pawn,L"Controller");if(!controller||!object(controller,L"Player"))return false;
     auto inv=object(pawn,L"InventoryComponent"),app=object(pawn,L"AppearanceComponent");if(!inv||!app)return false;
     if(runtime.playerReady||!runtime.player.matches(pawn)||!runtime.inventory.matches(inv)||!runtime.appearance.matches(app)){resetCosmetics(true);runtime.player=Ref(pawn);runtime.controller=Ref(controller);runtime.inventory=Ref(inv);runtime.appearance=Ref(app);runtime.doll={};runtime.dollAppearance={};}
-    if(!tables(pawn))return false;beginCatalog();runtime.activeSet=loadout();runtime.model.switchSet(runtime.activeSet);runtime.playerReady=true;requestRefresh();if(logging)trace(L"Attached player: "+pawn->GetName());return true;
+    if(!tables(pawn))return false;bindSheath(pawn);beginCatalog();runtime.activeSet=loadout();runtime.model.switchSet(runtime.activeSet);runtime.playerReady=true;requestRefresh();if(logging)trace(L"Attached player: "+pawn->GetName());return true;
 }
 void beginCatalog(){if(catalogStarted||!clothingTable)return;catalogStarted=true;tablePhase=tableCursor=0;expectedRows=table(false)->GetRowMap().Num();runtime.looks.clear();itemLookup.clear();runtime.catalogReady=false;}
 bool hasPreviewIcon(UObject* item){

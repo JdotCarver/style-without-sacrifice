@@ -17,6 +17,7 @@ struct Runtime {
     std::vector<Look> looks;
     uint64_t catalogSteps{},refreshes{},nativeOverrides{},weaponEvents{},appearanceEvents{},workMicros{},maxWorkMicros{},inventorySnapshots{},inventoryItems{};
     uint64_t immediateAppearances{},appearanceMicros{},maxAppearanceMicros{};
+    uint64_t sheathWrites{},sheathMicros{},maxSheathMicros{};
 };
 extern Runtime runtime;
 void readStore();bool writeStore();void pollStore();void finishStore();bool storePending();
