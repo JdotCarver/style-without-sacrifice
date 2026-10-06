@@ -98,8 +98,21 @@ UObject* loadAsset(FProperty* source,void* data){
 }
 void visibility(UObject* mesh,bool visible){if(!mesh)return;Call c(mesh,L"SetVisibility");if(c){c.num(L"bNewVisibility",visible);if(c.field(L"bPropagateToChildren"))c.num(L"bPropagateToChildren",1);c.invoke();}}
 void staticMesh(UObject* component,UObject* mesh){if(!component||!mesh)return;Call c(component,L"SetStaticMesh");if(c)c.obj(L"NewMesh",mesh).invoke();}
+UObject* weaponOwner(UObject* actor){
+    if(!actor)return nullptr;
+    auto owner=object(actor,L"Owner");
+    if(runtime.player.matches(owner)||runtime.doll.matches(owner))return owner;
+    // Combat-created weapons receive their combat owner after BeginPlay.
+    // Use the reflected component owner; never read the native weak pawn slot.
+    auto combat=object(actor,L"OwningCombatComponent");if(!combat)return nullptr;
+    Call get(combat,L"GetOwner");auto result=get?get.fn->GetReturnProperty():nullptr;
+    if(!result||!result->IsA<FObjectProperty>()||result->GetSize()!=sizeof(void*)||
+       static_cast<const FProperty*>(result)->GetOffset_Internal()!=0||get.fn->GetParmsSize()!=sizeof(void*))return nullptr;
+    get.invoke();owner=get.resultObject();
+    return runtime.player.matches(owner)||runtime.doll.matches(owner)?owner:nullptr;
+}
 void weaponAppearance(UObject* actor){
-    if(!actor)return;auto owner=object(actor,L"Owner");if(!runtime.player.matches(owner)&&!runtime.doll.matches(owner))return;
+    auto owner=weaponOwner(actor);if(!owner)return;
     auto mesh=object(actor,L"BaseMesh");if(!mesh)return;unsigned set=runtime.doll.matches(owner)?runtime.model.displayedSet:runtime.activeSet;auto& c=runtime.model.sets[set][4];
     // Hidden applies to the sheathed weapon; drawn weapons remain visible.
     if(runtime.settings.enabled&&c.mode==Choice::Mode::Look&&weaponMesh[set]&&weaponScale[set])editMesh(mesh,weaponMesh[set].get(),true,true,&*weaponScale[set]);
@@ -344,5 +357,18 @@ bool refresh(){
 }
 void selectLook(Slot slot,const Choice& c){if(runtime.model.choose(slot,c)){runtime.dirty=true;requestRefresh(runtime.model.displayedSet==runtime.activeSet,true);if(logging)trace(L"Look selected: set="+std::to_wstring(runtime.model.displayedSet)+L", slot="+slotNames[static_cast<unsigned>(slot)]+L", mode="+std::to_wstring(static_cast<int>(c.mode))+L", row="+c.row);}}
 void setDoll(UObject* p){runtime.doll=Ref(p);runtime.dollAppearance=Ref(object(p,L"AppearanceComponent"));requestRefresh(false,true);}
-void observeWeapon(UObject* p){if(!p||!object(p,L"WeaponDataAsset"))return;auto owner=object(p,L"Owner");if(!runtime.player.matches(owner)&&!runtime.doll.matches(owner))return;for(auto& r:weapons)if(r.matches(p))return;for(auto& r:weapons)if(!r){r=Ref(p);runtime.refreshWork.request(runtime.now);return;}}
+void observeWeapon(UObject* p){
+    if(!p||!weaponOwner(p))return;
+    if(logging)++runtime.weaponEvents;
+    bool known=false;for(auto& r:weapons)if(r.matches(p)){known=true;break;}
+    if(!known){
+        bool retained=false;
+        for(auto& r:weapons)if(!r||!weaponOwner(r.get())){r=Ref(p);retained=true;break;}
+        if(!retained){warn(L"Too many active player weapons; the new drawn appearance could not be retained.");return;}
+    }
+    // Appearance completion can happen repeatedly on the same pooled actor.
+    // Revisit it after the game finishes writing, even if already observed.
+    // Events during our refresh are consumed by its final weapon pass.
+    if(!insideRefresh)runtime.refreshWork.request(runtime.now);
+}
 }

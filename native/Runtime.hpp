@@ -15,7 +15,7 @@ struct Runtime {
     bool menuOpen{},catalogReady{},playerReady{},dirty{},shuttingDown{},persistenceBlocked{};
     unsigned activeSet{};
     std::vector<Look> looks;
-    uint64_t catalogSteps{},refreshes{},nativeOverrides{},workMicros{},maxWorkMicros{},inventorySnapshots{},inventoryItems{};
+    uint64_t catalogSteps{},refreshes{},nativeOverrides{},weaponEvents{},workMicros{},maxWorkMicros{},inventorySnapshots{},inventoryItems{};
 };
 extern Runtime runtime;
 void readStore();bool writeStore();void pollStore();void finishStore();bool storePending();

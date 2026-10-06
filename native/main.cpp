@@ -29,6 +29,17 @@ void registerFunction(const wchar_t* path,std::function<void(UnrealScriptFunctio
     try{auto ids=UObjectGlobals::RegisterHook(fn,{},[callback,fn](UnrealScriptFunctionCallableContext& ctx,void*){if(active)callback(ctx,fn);},nullptr);functionHooks.push_back({Ref(fn),ids});}
     catch(...){warn(std::wstring(L"Could not register event: ")+path);}
 }
+void scriptPost(UObject* owner,UFunction* fn,void* params,FFrame* frame){
+    // Reuse the existing script callback. The normal miss is just a name check.
+    static const FName appearanceEvent(L"OnWeaponAppearanceSet");
+    if(fn&&fn->GetFName()==appearanceEvent&&fn->GetParmsSize()==0){
+        auto cls=static_cast<UClass*>(weaponClass.get());
+        if(owner&&cls&&owner->IsA(cls)){
+            try{observeWeapon(owner);}catch(const std::exception& error){failure(L"Completed weapon appearance",error);}
+        }
+    }
+    menuScriptPost(owner,fn,params,frame);
+}
 void setup(){
     if(active)return;active=true;initializeReferences();initializeMenu();startCosmetics();readStore();weaponClass=Ref(find(L"/Script/DogwoodCombat.WeaponBase"));pawnClass=Ref(find(L"/Script/Engine.Pawn"));
     Hook::FCallbackOptions options;options.OwnerModName=L"WardrobeTransmog";
@@ -44,11 +55,11 @@ void setup(){
     },options));
     options.HookName=L"World teardown";
     callbacks.push_back(Hook::RegisterEndPlayPreCallback([](auto&,AActor* actor,EEndPlayReason){if(active&&runtime.player.matches(reinterpret_cast<UObject*>(actor)))resetSession();},options));
-    // ProcessLocalScriptFunction is filtered to the current hub's exact bound
-    // function pointers. No Lua is invoked by these native callbacks.
-    options.HookName=L"Wardrobe hub selection";
+    // Script callbacks filter hub functions and completed weapon appearances.
+    // No Lua is invoked by these native callbacks.
+    options.HookName=L"Wardrobe hub and weapon appearance events";
     callbacks.push_back(Hook::RegisterProcessLocalScriptFunctionPreCallback([](auto& info,UObject* owner,FFrame& frame,void*){if(active)menuScriptPre(owner,frame.Node(),frame.Locals(),info);},options));
-    callbacks.push_back(Hook::RegisterProcessLocalScriptFunctionPostCallback([](auto&,UObject* owner,FFrame& frame,void*){if(active)menuScriptPost(owner,frame.Node(),frame.Locals(),&frame);},options));
+    callbacks.push_back(Hook::RegisterProcessLocalScriptFunctionPostCallback([](auto&,UObject* owner,FFrame& frame,void*){if(active)scriptPost(owner,frame.Node(),frame.Locals(),&frame);},options));
     for(auto id:callbacks)if(id==Hook::ERROR_ID){warn(L"A required lifecycle hook could not be registered; restart with the required UE4SS native callback support.");stop();return;}
     // Activation fires after the widget tree exists, including pooled hubs.
     // There is no Wardrobe callback on every UObject construction.
@@ -108,7 +119,7 @@ void tick(){
         if(!busy&&ui){operation=L"Wardrobe menu";stepMenu();}
         pollStore();
         if(runtime.dirty){if(!saveDue)saveDue=runtime.now+1500;if(runtime.now>=saveDue){writeStore();saveDue=0;}}else saveDue=0;
-        if(logging){auto elapsed=static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-started).count());runtime.workMicros+=elapsed;runtime.maxWorkMicros=std::max(runtime.maxWorkMicros,elapsed);if(runtime.now-lastSummary>=10000){lastSummary=runtime.now;trace(L"Work totals: catalog steps="+std::to_wstring(runtime.catalogSteps)+L", refreshes="+std::to_wstring(runtime.refreshes)+L", clothing overrides="+std::to_wstring(runtime.nativeOverrides)+L", inventory snapshots="+std::to_wstring(runtime.inventorySnapshots)+L", inventory entries="+std::to_wstring(runtime.inventoryItems)+L", work us="+std::to_wstring(runtime.workMicros)+L", max tick us="+std::to_wstring(runtime.maxWorkMicros));}}
+        if(logging){auto elapsed=static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-started).count());runtime.workMicros+=elapsed;runtime.maxWorkMicros=std::max(runtime.maxWorkMicros,elapsed);if(runtime.now-lastSummary>=10000){lastSummary=runtime.now;trace(L"Work totals: catalog steps="+std::to_wstring(runtime.catalogSteps)+L", refreshes="+std::to_wstring(runtime.refreshes)+L", weapon appearance events="+std::to_wstring(runtime.weaponEvents)+L", clothing overrides="+std::to_wstring(runtime.nativeOverrides)+L", inventory snapshots="+std::to_wstring(runtime.inventorySnapshots)+L", inventory entries="+std::to_wstring(runtime.inventoryItems)+L", work us="+std::to_wstring(runtime.workMicros)+L", max tick us="+std::to_wstring(runtime.maxWorkMicros));}}
     }catch(const std::exception& e){
         failure(operation,e);opening=false;openAfterAttach=false;runtime.attachWork.cancel();cancelCosmeticWork();
         try{closeMenu();}catch(const std::exception& closeError){failure(L"Closing failed menu",closeError);}resetMenu();

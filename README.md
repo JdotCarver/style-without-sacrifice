@@ -50,7 +50,7 @@ The character preview stays in place while you change looks or save outfits. Sel
 
 With Logging enabled, a completed page records its group, visible-entry and cached-image counts. Page construction is limited to two entries per continuation. Grouping uses saved icon references without loading preview textures for the full catalog.
 
-Logging defaults to Off. Turn it on in Mod Setting Menu to record player attachment, game hub detection, tab creation and placement beside Inventory, page opening, hidden-wrist preparation, selected weapon sizing, aggregate catalog, inventory, refresh and appearance-override counts, total work time, and the longest active mod tick in `Dawnwalker/Binaries/Win64/ue4ss/UE4SS.log`. Operational failures include the failed action and error detail, once per distinct message, even when detailed logging is off. Failed player setup stops after twelve attempts; a later player event or shortcut press can retry it.
+Logging defaults to Off. Turn it on in Mod Setting Menu to record player attachment, game hub detection, tab creation and placement beside Inventory, page opening, hidden-wrist preparation, selected weapon sizing, completed weapon appearance events, aggregate catalog, inventory, refresh and appearance-override counts, total work time, and the longest active mod tick in `Dawnwalker/Binaries/Win64/ue4ss/UE4SS.log`. Operational failures include the failed action and error detail, once per distinct message, even when detailed logging is off. Failed player setup stops after twelve attempts; a later player event or shortcut press can retry it.
 
 ## Source
 
