@@ -42,7 +42,7 @@ The mod creates `settings.ini` and `wardrobe.dat` inside `ue4ss/Mods/WardrobeTra
 
 Selecting **Original look** restores that slot's equipped appearance. **Reset Set** clears the displayed outfit. Presets store one complete outfit and can be loaded into either set.
 
-Selected weapon appearances keep their authored size while drawn or sheathed, with matching scabbards and character previews. Choosing a greatsword look keeps its greatsword size regardless of the weapon equipped for its stats. Changing looks keeps inactive swords hidden, and loading another save clears old weapon and sheath edits before applying your wardrobe. Vampire claws and fists retain their own appearance. Saved weapon looks reapply after the character finishes loading.
+Selected weapon appearances keep their authored size while drawn or sheathed, with matching scabbards and character previews. Choosing a greatsword look keeps its greatsword size regardless of the weapon equipped for its stats. The [DB] Heavy Weapon look uses a pickaxe. Changing looks keeps inactive swords hidden, and loading another save clears old weapon and sheath edits before applying your wardrobe. Vampire claws and fists retain their own appearance. Saved weapon looks reapply after the character finishes loading.
 
 Hiding gloves or wristbands restores the natural forearm shape in both the character preview and gameplay.
 

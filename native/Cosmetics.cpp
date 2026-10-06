@@ -181,12 +181,15 @@ void prepareWeaponRows(){
             // Asset loading can run engine callbacks. Keep an owned row rather
             // than a pointer into the table across those calls.
             OwnedRow selected(wt,row);
-            auto scale=selectedWeaponScale(c.row);
+            // The stock debug-heavy row is a cart, and PickaxeTest is an axe.
+            // Use the actual pickaxe template without changing shared assets.
+            bool pickaxe=c.row==L"ITM_Weapon_TestDebugHeavyWeapon";Ref templateMesh;
+            auto scale=selectedWeaponScale(c.row,pickaxe?L"/Game/_Dawnwalker/Blueprints/Items/Equippable/BP_Weapon_Pickaxe.BP_Weapon_Pickaxe_C":nullptr,pickaxe?&templateMesh:nullptr);
             if(!scale)continue;
             auto type=static_cast<UScriptStruct*>(selected.type.get());if(!type)continue;
             weaponScale[set]=scale;
-            weaponMesh[set]=Ref(loadAsset(property(type,L"WeaponMesh"),selected.bytes.data()));
-            if(selected.type)scabbardMesh[set]=Ref(loadAsset(property(type,L"ScabbardMesh"),selected.bytes.data()));
+            weaponMesh[set]=pickaxe?templateMesh:Ref(loadAsset(property(type,L"WeaponMesh"),selected.bytes.data()));
+            if(!pickaxe&&selected.type)scabbardMesh[set]=Ref(loadAsset(property(type,L"ScabbardMesh"),selected.bytes.data()));
             if(logging)trace(L"Selected weapon authored mesh scale: row="+c.row+L", x="+std::to_wstring((*scale)[0])+L", y="+std::to_wstring((*scale)[1])+L", z="+std::to_wstring((*scale)[2]));
         }
     }

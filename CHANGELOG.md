@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Correct [DB] Heavy Weapon to use a pickaxe instead of a cart.
+
 - Prevent floating or duplicate swords when using vampire claws or fists, and reapply saved weapon looks after loading.
 
 - Keep inactive swords hidden when changing weapon looks and clean up old sheath appearances when loading another save.
