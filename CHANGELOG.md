@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Correct the demo greatsword's size and restore the sacrificial knife appearance. Failed item loads no longer shrink weapon looks to a default size.
+
 - Fix greatsword appearances shrinking to one-handed size. Selected weapons keep their size while drawn or sheathed, including scabbards and character previews.
 
 ## 1.0

@@ -39,13 +39,27 @@ inline std::optional<MeshScale> selectedWeaponScale(const std::wstring& row){
     // Resolve the chosen appearance's item, never the equipped weapon. All
     // appearance-table keys are item asset names. Only a changed choice
     // reaches this path; missing assets are not polled in the background.
-    auto path=L"/Game/_Dawnwalker/Inventory/Items/"+row+L"."+row;
+    // These stock rows share the exact weapon mesh with the named item, but
+    // the demo has no item asset and the sacrificial knife has no class reference.
+    // Resolve real defaults instead of guessing a scale or rejecting the look.
+    const auto& sizingRow=row==L"ITM_Weapon_SwordGreatMaster6aDemoOnly"?std::wstring(L"ITM_Weapon_SwordGreatMaster6a"):
+        row==L"ITM_Weapon_SacrificialKnife"?std::wstring(L"ITM_Weapon_LeonicaKnife"):row;
+    auto path=L"/Game/_Dawnwalker/Inventory/Items/"+sizingRow+L"."+sizingRow;
     auto item=asset(path.c_str());
     if(!item){
-        // Catalog-only test/demo meshes have no item or type-specific sizing.
-        // Show their authored size instead of inheriting the equipped item's.
-        if(logging)trace(L"Weapon appearance has no item defaults; using authored mesh scale: "+row);
-        return MeshScale{1,1,1};
+        // Only audited catalog-only rows use unit scale. A failed load for a
+        // normal item must not silently shrink a large weapon to unit size.
+        for(auto name:{L"ITM_Weapon_AxeTest",L"ITM_Weapon_MaceTest",L"ITM_Weapon_VampireClawsTest",
+            L"ITM_Weapon_AxeTest2",L"ITM_Weapon_BoardTest",L"ITM_Weapon_HammerTest",L"ITM_Weapon_PickaxeTest",
+            L"ITM_Weapon_SwordLongCommon2DemoOnly",L"ITM_Weapon_SwordLongSuperior2DemoOnly",
+            L"ITM_Weapon_SwordLongSuperior7DemoOnly",L"ITM_Weapon_DawnwalkerSword",
+            L"ITM_Weapon_AxeShortCommon1",L"ITM_Weapon_AxeShortSuperior1",L"ITM_Weapon_AxeShortMaster1"}){
+            if(row==name){
+                if(logging)trace(L"Catalog-only weapon appearance uses unit scale: "+row);
+                return MeshScale{1,1,1};
+            }
+        }
+        return weaponScaleFailure(L"Selected weapon item defaults could not be loaded.",row);
     }
     auto blueprint=property(item,L"WeaponBlueprint");
     // Class loading may dispatch engine callbacks. Copy the asset reference
