@@ -38,6 +38,8 @@ Within each category, **Player Outfits** with inventory icons appear first, foll
 
 Use Mod Setting Menu to change **Enabled**, the **Wardrobe shortcut**, and **Logging**. Choose End, F7, F8 or F9 as the shortcut. Apply takes effect without restarting.
 
+If you encounter an issue, set **Logging** to **On** in this mod's Mod Setting Menu settings, apply the change, reproduce the issue, and send me `Dawnwalker/Binaries/Win64/ue4ss/UE4SS.log` from your game folder.
+
 The mod creates `settings.ini` and `wardrobe.dat` inside `ue4ss/Mods/WardrobeTransmog`. These personal files are not included in the download. Keep a backup of both files. Outfits and collected appearances are shared across saves; collection starts with items observed while this mod is active. The All Looks filter gives access to the rest of the catalog.
 
 Selecting **Original look** restores that slot's equipped appearance. **Reset Set** clears the displayed outfit. Presets store one complete outfit and can be loaded into either set.
