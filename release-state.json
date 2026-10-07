@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "packages": {
+    "main": {
+      "id": "WardrobeTransmog",
+      "name": "Style Without Sacrifice",
+      "archive": "Style-Without-Sacrifice.zip",
+      "packageFormat": 1,
+      "baseline": {
+        "kind": "nexus",
+        "version": "1.0.2",
+        "normalizedVersion": "1.0.2",
+        "sourceCommit": "026aec27056d0e7428729905f7d136a357068f2b",
+        "sourceTag": "v1.0.2",
+        "archiveSha256": "c800d7613c0157e4da760eed4c34cf7902cb414fa04f13b0fb2ed6c5b7d4573a",
+        "verifiedAt": "2026-10-07T12:13:18.0320211Z",
+        "nexus": {
+          "game": "thebloodofdawnwalker",
+          "pageId": "721",
+          "modId": "41742787150545",
+          "fileChainId": "8084433",
+          "versionId": "41742787152968",
+          "siteFileId": "3144"
+        }
+      },
+      "bindings": [
+        {
+          "path": "Nexus/listing.json",
+          "jsonPointer": [
+            "version"
+          ],
+          "members": [
+            "Nexus/listing.json"
+          ]
+        },
+        {
+          "path": "mod_settings.ini",
+          "pattern": "^Version\\s*=\\s*(?P<version>[^\\r\\n]+)",
+          "count": 1,
+          "members": [
+            "Data/WardrobeTransmog/mod_settings.ini"
+          ]
+        },
+        {
+          "path": "native/main.cpp",
+          "pattern": "ModVersion\\s*=\\s*(?:STR\\(|L)?\"(?P<version>[^\"]+)\"",
+          "count": 1,
+          "members": []
+        },
+        {
+          "path": "package/mod.manifest",
+          "pattern": "<version>(?P<version>[^<]+)</version>",
+          "count": 1,
+          "members": [
+            "mod.manifest"
+          ]
+        }
+      ],
+      "excludePaths": [
+        "Optional",
+        "Compatibility",
+        "VortexExtension"
+      ],
+      "pending": {
+        "impact": "patch",
+        "rationale": "Reduce catalog and reflected-object discovery work while retaining the released consumable-animation appearance fix; reconcile release metadata.",
+        "majorOverride": false,
+        "reviewedInputs": "b84e6dec230638d8a2e4165ba22aae5f5949b1dcefda023ddae122a5574ee630",
+        "divergenceReviewed": true
+      }
+    }
+  }
+}
