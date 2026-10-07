@@ -71,3 +71,7 @@ This mod is an independent implementation. **Not a single line of code from eith
 Wardrobe reuses deletion-aware references to loaded helpers and UI classes. Weapon catalog discovery runs in bounded slices; equipped appearances still refresh before optional catalog work. Asset loading remains synchronous when an appearance is first needed. Logging adds per-operation counts, total time and maximum time for attachment, catalog work, asset loading, refresh and menu work. These nested measurements overlap and must not be added together.
 
 Enable the final **Logging** setting for diagnostics in `Dawnwalker/Binaries/Win64/ue4ss/UE4SS.log`. Leave it Off for normal play. Timings and offline checks do not establish an in-game frame-rate improvement.
+
+### Logging
+
+Logging is the final diagnostic setting: **Off**, **Error**, **Warning** (default), **Info**, or **Debug**. Levels include all more severe messages. Off silences this mod; Debug includes detailed events and timing summaries in `Dawnwalker/Binaries/Win64/ue4ss/UE4SS.log`. Old Logging Debug preferences become Debug; old Off preferences become Warning.

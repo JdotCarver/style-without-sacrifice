@@ -1,5 +1,7 @@
 # Changelog
 
+- Choose Off, Error, Warning, Info or Debug logging; Warning is the default.
+
 ## Unreleased
 
 - Restore Wardrobe item navigation and page changes with mouse, keyboard and game-recognized controllers, without clicking a tile first.

@@ -54,4 +54,5 @@ void setText(UObject*,const wchar_t*,const std::wstring&);
 void warn(const std::wstring&);void trace(const std::wstring&);
 void failure(const wchar_t*,const std::exception&);
 extern bool logging;
+extern std::atomic_int logLevel;
 }

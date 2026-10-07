@@ -11,6 +11,7 @@
 
 namespace Wardrobe {
 bool logging=false;
+std::atomic_int logLevel{2};
 namespace {
 constexpr size_t watchCount=8192;
 std::array<std::atomic_bool,watchCount> interests;
@@ -32,11 +33,11 @@ std::map<std::pair<UObject*,std::wstring>,FunctionBinding> functions;
 std::map<std::wstring,Ref> objects;
 std::set<std::wstring> warnings;
 }
-void warn(const std::wstring& s){if(warnings.size()<64&&warnings.insert(s).second)RC::Output::send(L"[WardrobeTransmog] "+s+L"\n");}
+void warn(const std::wstring& s){if(logLevel>=2&&warnings.size()<64&&warnings.insert(s).second)RC::Output::send(L"[WardrobeTransmog] "+s+L"\n");}
 void trace(const std::wstring& s){if(logging)RC::Output::send(L"[WardrobeTransmog] "+s+L"\n");}
 void failure(const wchar_t* action,const std::exception& error){
     std::wstring detail;for(auto p=error.what();*p&&detail.size()<384;++p)detail.push_back(static_cast<unsigned char>(*p));
-    warn(std::wstring(action)+L": "+detail);
+    if(logLevel>=1&&warnings.size()<64&&warnings.insert(std::wstring(action)+L": "+detail).second)RC::Output::send(std::wstring(L"[WardrobeTransmog][ERROR] ")+action+L": "+detail+L"\n");
 }
 void initializeReferences(){if(!alive.exchange(true))FUObjectArray::AddUObjectDeleteListener(&listener);}
 void shutdownReferences(){if(alive.exchange(false))FUObjectArray::RemoveUObjectDeleteListener(&listener);std::lock_guard lock(lifeMutex);for(auto& [index,value]:lives)if(auto life=value.lock())life->alive=false;lives.clear();}

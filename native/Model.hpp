@@ -40,7 +40,7 @@ struct Model {
     void switchSet(unsigned i){displayedSet=std::min(i,1u);page=selected=0;}
     bool learn(const std::wstring& key){if(key.empty()||key.size()>512||collected.size()>=16384)return false;return collected.insert(key).second;}
 };
-struct Settings {bool enabled=true;bool debugLogging=false;unsigned openKey=0;};
+struct Settings {bool enabled=true;int logLevel=2;bool debugLogging=false;unsigned openKey=0;};
 // An event burst coalesces into one bounded continuation; no retry work remains
 // after success or exhaustion. A new lifecycle event starts a fresh window.
 struct Work {
