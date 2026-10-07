@@ -34,7 +34,7 @@ std::map<std::wstring,Ref> objects;
 std::set<std::wstring> warnings;
 }
 void warn(const std::wstring& s){if(logLevel>=2&&warnings.size()<64&&warnings.insert(s).second)RC::Output::send(L"[WardrobeTransmog] "+s+L"\n");}
-void trace(const std::wstring& s){if(logging)RC::Output::send(L"[WardrobeTransmog] "+s+L"\n");}
+void trace(const std::wstring& s){if(logLevel.load(std::memory_order_relaxed)>=4)RC::Output::send(L"[WardrobeTransmog] "+s+L"\n");}
 void failure(const wchar_t* action,const std::exception& error){
     std::wstring detail;for(auto p=error.what();*p&&detail.size()<384;++p)detail.push_back(static_cast<unsigned char>(*p));
     if(logLevel>=1&&warnings.size()<64&&warnings.insert(std::wstring(action)+L": "+detail).second)RC::Output::send(std::wstring(L"[WardrobeTransmog][ERROR] ")+action+L": "+detail+L"\n");

@@ -69,9 +69,9 @@
       ],
       "pending": {
         "impact": "minor",
-        "rationale": "Complete direct baseline delta reviewed. Retains preceding scope: Complete direct Nexus 1.0.2 baseline delta reviewed: compatible catalog/reflection caching and timing; game-recognized paused controller routing; fix persistent lower HUD/tutorial layers blocking every Wardrobe input mode while preserving all four higher blockers; retain neutral-axis history and clear stale action samples; diagnostics and controls documentation. Generated native output rebuilt twice and verified. Appearance behavior, setting keys, saves and public APIs remain compatible. Adds compatible cumulative Logging Off/Error/Warning/Info/Debug, default Warning, preference migration and local unchanged-library output boundaries; native logging ABI coordinated with rebuilt DLLs. New option makes the full remaining delta minor.",
+        "rationale": "Complete direct baseline delta reviewed. Retains preceding scope: Complete direct Nexus 1.0.2 baseline delta reviewed: compatible catalog/reflection caching and timing; game-recognized paused controller routing; fix persistent lower HUD/tutorial layers blocking every Wardrobe input mode while preserving all four higher blockers; retain neutral-axis history and clear stale action samples; diagnostics and controls documentation. Generated native output rebuilt twice and verified. Appearance behavior, setting keys, saves and public APIs remain compatible. Adds compatible cumulative Logging Off/Error/Warning/Info/Debug, default Warning, preference migration and local unchanged-library output boundaries; native logging ABI coordinated with rebuilt DLLs. New option makes the full remaining delta minor. Review follow-up: native trace checks the immediate atomic output level during queued Debug-to-Off transitions.",
         "majorOverride": false,
-        "reviewedInputs": "79998c73a45d6f35456057aab0a4bb7704a917ff1a70eeae9b57cd20bc9a8acf",
+        "reviewedInputs": "9cb37b2beb1fd2018337d57d6ee2104ea4cee935f224498803930575b449c9dc",
         "divergenceReviewed": true
       }
     }
