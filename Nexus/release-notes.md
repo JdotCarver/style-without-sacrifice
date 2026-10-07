@@ -1,3 +1,2 @@
-- Fix greatsword appearances shrinking to one-handed size while drawn or sheathed, including scabbards and character previews.
-- Keep selected weapon appearances when drawing a sword and after loading a save.
-- Prevent floating or duplicate swords when switching between swords and vampire claws or fists.
+- Fix Wardrobe controls for controllers recognized by the game while the character menu is paused.
+- Reduce repeated work while opening and browsing the appearance catalog.

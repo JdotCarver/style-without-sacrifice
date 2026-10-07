@@ -1,4 +1,5 @@
 #include "Runtime.hpp"
+#include "ControllerInput.hpp"
 #include "Performance.hpp"
 #include "ScriptEvent.hpp"
 #include <Mod/CppUserModBase.hpp>
@@ -56,7 +57,7 @@ void scriptPost(UObject* owner,UFunction* fn,void* params,FFrame* frame){
     menuScriptPost(owner,fn,params,frame);
 }
 void setup(){
-    if(active)return;active=true;initializeReferences();initializeMenu();startCosmetics();readStore();weaponClass=Ref(find(L"/Script/DogwoodCombat.WeaponBase"));pawnClass=Ref(find(L"/Script/Engine.Pawn"));
+    if(active)return;active=true;initializeReferences();initializeMenu();startCosmetics();startControllerInput();readStore();weaponClass=Ref(find(L"/Script/DogwoodCombat.WeaponBase"));pawnClass=Ref(find(L"/Script/Engine.Pawn"));
     Hook::FCallbackOptions options;options.OwnerModName=L"WardrobeTransmog";
     options.HookName=L"Bounded UI and event work";
     callbacks.push_back(Hook::RegisterEngineTickPostCallback([](auto&,auto*,float,bool){tick();},options));
@@ -158,7 +159,7 @@ void stop(){
     // Teardown never invokes gameplay or UI functions from the loader thread.
     for(auto id:callbacks)Hook::UnregisterCallback(id);callbacks.clear();
     for(auto& hook:functionHooks)if(auto fn=static_cast<UFunction*>(hook.fn.get()))UObjectGlobals::UnregisterHook(fn,hook.ids);functionHooks.clear();
-    weaponGraphs.clear();shutdownReferences();stopCosmetics();
+    stopControllerInput();weaponGraphs.clear();shutdownReferences();stopCosmetics();
 }
 }
 using namespace RC;

@@ -3,12 +3,12 @@
 #include "ScriptEvent.hpp"
 #include "MenuWidgets.hpp"
 #include "MenuInput.hpp"
+#include "ControllerInput.hpp"
 #include "CatalogOrder.hpp"
 #include <Unreal/UEnum.hpp>
 #include <map>
 #include <Unreal/Core/Windows/AllowWindowsPlatformTypes.hpp>
 #include <Windows.h>
-#include <Xinput.h>
 #include <deque>
 #include <optional>
 
@@ -25,6 +25,7 @@ std::map<std::wstring,Ref> glyphTextures;
 uint64_t shownRevision=~uint64_t{};unsigned shownFocus=~0u;bool controllerInput{},paintHints=true;
 constexpr auto frames=L"/Game/_Dawnwalker/UI/_Unified/SharedTextures/General/Frames/";
 Ref showFunction,hubGraph,createTabFunction;
+Ref inputLayer;std::array<Ref,6> inputBlockers;bool inputLayersReady{};uint64_t inputOwnershipQueries{};
 bool insertingTab{},orderingNavbar{};
 ScriptEvent activated,deactivated,rebuilt;
 Work injection;bool wantsOpen{},redraw{},built{};unsigned tileCursor{},popup{},focus{};
@@ -35,7 +36,7 @@ struct Control {Ref parent;std::wstring caption;std::function<void()> click;Layo
 std::vector<Look> filtered;std::vector<Choice> pageChoices;
 std::vector<CatalogPage> catalogPages{{}};
 const CatalogPage& currentPage(){return catalogPages.at(runtime.model.page);}
-std::array<bool,256> previousKeys{};WORD previousPad{};BYTE previousLeft{},previousRight{};POINT previousMouse{};uint64_t xPressed{};
+std::array<bool,256> previousKeys{};POINT previousMouse{};uint64_t xPressed{};bool hadInputFocus{};
 std::array<bool,256> keyEdges{};
 StickNavigation stick;
 bool pressed(int key){return keyEdges[key];}
@@ -259,10 +260,19 @@ void show(){
     // sizing and fade behavior. A missing optional background cannot block UI.
     try{Call background(object(hub,L"Background"),L"SetBackgroundTexture");auto p=background.field(L"InBackgroundTexture");if(p&&p->IsA<FSoftObjectProperty>()&&p->ImportText_Direct(L"/Game/_Dawnwalker/UI/_Unified/SharedTextures/Backgrounds/Fullscreen/T_Background_Inventory_and_InventoryStats.T_Background_Inventory_and_InventoryStats",background.value(L"InBackgroundTexture"),nullptr,0,nullptr))background.num(L"WithFadeOut",0).invoke();}catch(const std::exception& e){failure(L"Inventory background",e);}
     if(auto nav=navbar.get()){Call selectTab(nav,L"SelectTab");if(selectTab){tag(selectTab.field(L"InTabTag"),selectTab.data(),tagName);selectTab.invoke();}}
+    inputLayersReady=false;
+    try{
+        Call frontend(find(L"/Script/DogwoodUI.Default__UIFrontend"),L"GetFrontend");frontend.obj(L"WorldContextObject",runtime.player.get()).invoke();auto owner=frontend.resultObject();
+        inputLayer=Ref(object(owner,L"GameMenuLayer"));
+        const wchar_t* names[]={L"MenuLayer",L"ModalLayer",L"GameMenuTutorialLayer",L"TutorialLayer",L"PhotoModeLayer",L"GameplayDialogueLayer"};
+        inputLayersReady=bool(inputLayer);
+        for(size_t i=0;i<inputBlockers.size();++i){inputBlockers[i]=Ref(object(owner,names[i]));inputLayersReady=inputLayersReady&&bool(inputBlockers[i]);}
+        if(!inputLayersReady)warn(L"Controller UI ownership layers unavailable; keyboard and mouse remain available.");
+    }catch(const std::exception& e){failure(L"Controller UI ownership layers",e);}
     runtime.menuOpen=true;runtime.model.switchSet(runtime.activeSet);wantsOpen=false;popup=0;redraw=true;beginCatalog();preview();if(logging)trace(L"Wardrobe page opened.");
     for(int i=0;i<256;++i)previousKeys[i]=(GetAsyncKeyState(i)&0x8000)!=0;
     GetCursorPos(&previousMouse);xPressed=0;stick.reset();
-    XINPUT_STATE state{};previousPad=XInputGetState(0,&state)==ERROR_SUCCESS?state.Gamepad.wButtons:0;
+    hadInputFocus=false;resetControllerInput();
 }
 bool createWardrobeTab(){
     if(tabButton)return true;auto nav=navbar.get();if(!nav||insertingTab)return false;
@@ -310,6 +320,36 @@ void move(int delta){
     }
     focus=static_cast<unsigned>((next%static_cast<int>(buttons.size())+static_cast<int>(buttons.size()))%static_cast<int>(buttons.size()));focusPaint();
 }
+}
+bool menuForeground(){DWORD foreground{};GetWindowThreadProcessId(GetForegroundWindow(),&foreground);return foreground==GetCurrentProcessId();}
+uint64_t menuInputQueries(){return inputOwnershipQueries;}
+enum class MenuOwnership {Unavailable,Blocked,Owned};
+bool inputObjectGetter(UObject* owner,const wchar_t* name,UObject*& result){
+    Call call(owner,name);if(!call||call.fn->GetNumParms()!=1)return false;
+    auto p=call.fn->GetReturnProperty();if(!p||!p->IsA<FObjectProperty>()||p->GetSize()!=sizeof(void*))return false;
+    call.invoke();if(logging)++inputOwnershipQueries;result=call.resultObject();return true;
+}
+MenuOwnership menuOwnership(){
+    if(!runtime.menuOpen||!runtime.settings.enabled||!runtime.playerReady||!runtime.controller||!runtime.hub||!page||!menuForeground())return MenuOwnership::Blocked;
+    if(!inputLayersReady||!inputLayer)return MenuOwnership::Unavailable;
+    try{
+        // A native Overlay need not be a Slate focus root. Test the stock
+        // frontend input layers, excluding persistent GameOverlay/HUD content.
+        for(auto& layer:inputBlockers){if(!layer)return MenuOwnership::Unavailable;UObject* top{};if(!inputObjectGetter(layer.get(),L"GetActiveWidget",top))return MenuOwnership::Unavailable;if(top)return MenuOwnership::Blocked;}
+        UObject* top{};if(!inputObjectGetter(inputLayer.get(),L"GetActiveWidget",top))return MenuOwnership::Unavailable;if(!runtime.hub.matches(top))return MenuOwnership::Blocked;
+        Call active(runtime.hub.get(),L"IsActivated");if(!active||active.fn->GetNumParms()!=1)return MenuOwnership::Unavailable;
+        auto p=active.fn->GetReturnProperty();if(!p||!p->IsA<FBoolProperty>())return MenuOwnership::Unavailable;
+        active.invoke();if(logging)++inputOwnershipQueries;if(!active.resultInteger())return MenuOwnership::Blocked;
+        if(!inputObjectGetter(object(runtime.hub.get(),L"HubSwitcher"),L"GetActiveWidget",top))return MenuOwnership::Unavailable;
+        return page.matches(top)?MenuOwnership::Owned:MenuOwnership::Blocked;
+    }catch(const std::exception& e){failure(L"Controller UI ownership",e);return MenuOwnership::Unavailable;}
+}
+bool menuControllerFocused(){return menuOwnership()==MenuOwnership::Owned;}
+bool menuKeyboardFocused(){
+    auto ownership=menuOwnership();
+    // Known modals/other pages block every input. Only unavailable controller
+    // capabilities fall back to the pre-existing keyboard/mouse foreground gate.
+    return ownership==MenuOwnership::Owned||(ownership==MenuOwnership::Unavailable&&runtime.menuOpen&&runtime.settings.enabled&&bool(page)&&bool(runtime.hub)&&menuForeground());
 }
 void initializeMenu(){hubGraph=Ref(find(L"/Game/_Dawnwalker/UI/_Unified/GameHub/WBP_Window_GameHub.WBP_Window_GameHub_C:ExecuteUbergraph_WBP_Window_GameHub"));}
 bool menuPending(){return injection.pending||wantsOpen;}
@@ -366,10 +406,12 @@ void openMenu(){
     }
 }
 void closeMenu(){
+    resetControllerInput();xPressed=0;hadInputFocus=false;
     wantsOpen=false;popup=0;if(!runtime.menuOpen){stopPreview();return;}runtime.menuOpen=false;stopPreview();
     if(auto hub=runtime.hub.get())call(hub,L"DeactivateWidget");writeStore();
 }
 void resetMenu(){
+    resetControllerInput();hadInputFocus=false;inputLayersReady=false;inputLayer={};inputBlockers={};
     auto oldPage=page;
     runtime.menuOpen=false;wantsOpen=false;popup=0;injection.cancel();page={};tree={};root={};grid={};title={};footer={};navbar={};tabButton={};previewImage={};showFunction={};hubGraph={};createTabFunction={};activated={};deactivated={};rebuilt={};buttons.clear();controls.clear();pendingControls.clear();filtered.clear();pageChoices.clear();built=false;countLabel={};pageLabel={};groupLabel={};catalogPages={{}};modal={};modalGrid={};modalTitle={};modalHelp={};fontStyle={};gridFrame={};activeFrame={};categoryFrame={};categoryIcons={};summaryImages={};summaryFills={};summaryFrames={};summaryTitle={};summaryChoice={};itemIcons.clear();rarityTextures.clear();glyphTextures.clear();xPressed=0;stick.reset();nextFocus.reset();
     if(auto p=oldPage.get())try{call(p,L"RemoveFromParent");}catch(const std::exception& e){failure(L"Removing Wardrobe page",e);}
@@ -385,42 +427,45 @@ void stepMenu(){
     if(!pendingControls.empty()){for(unsigned i=0;i<2&&!pendingControls.empty();++i){auto control=std::move(pendingControls.front());pendingControls.pop_front();button(control.parent.get(),control.caption,std::move(control.click),control.rect,true,control.category,control.category>=0&&control.category<5?categoryIcons[control.category].get():nullptr);if(control.category>=0&&control.category<5)UI::visible(controls.back().highlight.get(),unsigned(control.category)==runtime.model.category);}paintHints=true;}
     else addTiles(); // One allocation budget shared by controls and choices.
     if(shownRevision!=runtime.model.revision)updateSummary();
-    DWORD foreground{};GetWindowThreadProcessId(GetForegroundWindow(),&foreground);if(foreground!=GetCurrentProcessId())return;
+    auto input=controllerSample();
+    if(input.cancelled){xPressed=0;stick.reset();}
+    if(!menuKeyboardFocused()){hadInputFocus=false;xPressed=0;stick.reset();resetControllerInput();return;}
+    if(!hadInputFocus){for(int i=0;i<256;++i)previousKeys[i]=(GetAsyncKeyState(i)&0x8000)!=0;GetCursorPos(&previousMouse);hadInputFocus=true;}
     pollKeys();
-    XINPUT_STATE state{};WORD pad{};BYTE left{},right{};if(XInputGetState(0,&state)==ERROR_SUCCESS){pad=state.Gamepad.wButtons;left=state.Gamepad.bLeftTrigger;right=state.Gamepad.bRightTrigger;}
-    int analog=stick.poll(state.Gamepad.sThumbLX,state.Gamepad.sThumbLY,runtime.now);
-    WORD edges=pad&~previousPad;
-    bool padActivity=edges||analog||(left>128&&previousLeft<=128)||(right>128&&previousRight<=128);
+    auto pad=input.buttons,edges=input.edges;
+    int analog=stick.poll(input.x,input.y,runtime.now);
+    bool padActivity=edges||analog||input.leftEdge||input.rightEdge;
     if(padActivity&&!controllerInput){controllerInput=true;paintHints=true;}
     if(paintHints)inputHints();
-    bool escape=pressed(VK_ESCAPE)||(edges&XINPUT_GAMEPAD_B);if(escape){if(popup){popup=0;redraw=true;}else closeMenu();previousPad=pad;return;}
+    bool escape=pressed(VK_ESCAPE)||(edges&Pad::B);if(escape){if(popup){popup=0;redraw=true;}else closeMenu();xPressed=0;return;}
     if(!popup){
-    bool previousPage=pressed(VK_PRIOR)||(edges&XINPUT_GAMEPAD_DPAD_LEFT);
-    bool nextPage=pressed(VK_NEXT)||(edges&XINPUT_GAMEPAD_DPAD_RIGHT);
+    bool previousPage=pressed(VK_PRIOR)||(edges&Pad::Left);
+    bool nextPage=pressed(VK_NEXT)||(edges&Pad::Right);
     if(previousPage||nextPage){
         changePage(previousPage?-1:1);
         // Consume even a boundary press so a simultaneous stick/confirm input
         // cannot move or select an item while the player is changing pages.
-        previousPad=pad;previousLeft=left;previousRight=right;return;
+        xPressed=0;return;
     }
-    if(pressed('A')||(left>128&&previousLeft<=128)){runtime.model.category=(runtime.model.category+4)%5;runtime.model.page=0;redraw=true;}
-    if(pressed('D')||(right>128&&previousRight<=128)){runtime.model.category=(runtime.model.category+1)%5;runtime.model.page=0;redraw=true;}
-    if(pressed('P')||(edges&XINPUT_GAMEPAD_START)){runtime.model.switchSet(1-runtime.model.displayedSet);requestRefresh(false,true);redraw=true;}
-    if(pressed('Y')||(edges&XINPUT_GAMEPAD_RIGHT_THUMB)){runtime.model.allLooks=!runtime.model.allLooks;runtime.dirty=true;runtime.model.page=0;redraw=true;}
-    if(pressed('F')||(edges&XINPUT_GAMEPAD_LEFT_THUMB))selectLook(static_cast<Slot>(runtime.model.category),{Choice::Mode::Hidden,{}});
+    if(pressed('A')||input.leftEdge){runtime.model.category=(runtime.model.category+4)%5;runtime.model.page=0;redraw=true;}
+    if(pressed('D')||input.rightEdge){runtime.model.category=(runtime.model.category+1)%5;runtime.model.page=0;redraw=true;}
+    if(pressed('P')||(edges&Pad::Menu)){runtime.model.switchSet(1-runtime.model.displayedSet);requestRefresh(false,true);redraw=true;}
+    if(pressed('Y')||(edges&Pad::RStick)){runtime.model.allLooks=!runtime.model.allLooks;runtime.dirty=true;runtime.model.page=0;redraw=true;}
+    if(pressed('F')||(edges&Pad::LStick))selectLook(static_cast<Slot>(runtime.model.category),{Choice::Mode::Hidden,{}});
     if(pressed('T')){popup=1;redraw=true;}
-    if(pressed('S')||(edges&XINPUT_GAMEPAD_Y)){popup=2;redraw=true;}
-    if(edges&XINPUT_GAMEPAD_X)xPressed=runtime.now;
-    bool heldReset=xPressed&&(pad&XINPUT_GAMEPAD_X)&&runtime.now-xPressed>=600;
+    if(pressed('S')||(edges&Pad::Y)){popup=2;redraw=true;}
+    if(edges&Pad::X)xPressed=runtime.now;
+    bool heldReset=xPressed&&(pad&Pad::X)&&runtime.now-xPressed>=600;
     if(pressed('R')||heldReset){if(runtime.model.reset()){runtime.dirty=true;requestRefresh(runtime.model.displayedSet==runtime.activeSet,true);}xPressed=0;popup=0;redraw=true;}
-    if(xPressed&&!(pad&XINPUT_GAMEPAD_X)){popup=1;redraw=true;xPressed=0;}
+    if(xPressed&&!(pad&Pad::X)){popup=1;redraw=true;xPressed=0;}
     }
-    if(redraw){previousPad=pad;previousLeft=left;previousRight=right;return;}
+    else xPressed=0;
+    if(redraw)return;
     int navigation{};
     if(pressed(VK_LEFT))navigation=-1;
     else if(pressed(VK_RIGHT))navigation=1;
-    else if(pressed(VK_UP)||(edges&XINPUT_GAMEPAD_DPAD_UP))navigation=popup?-1:-int(Layout::columns);
-    else if(pressed(VK_DOWN)||(edges&XINPUT_GAMEPAD_DPAD_DOWN))navigation=popup?1:int(Layout::columns);
+    else if(pressed(VK_UP)||(edges&Pad::Up))navigation=popup?-1:-int(Layout::columns);
+    else if(pressed(VK_DOWN)||(edges&Pad::Down))navigation=popup?1:int(Layout::columns);
     else if(analog)navigation=analog==1?1:analog==-1?-1:analog==-2?(popup?-1:-int(Layout::columns)):(popup?1:int(Layout::columns));
     if(navigation)move(navigation);
     bool click=pressed(VK_LBUTTON);POINT mouse{};GetCursorPos(&mouse);
@@ -428,7 +473,6 @@ void stepMenu(){
     if(click){for(auto& control:controls)if((popup?control.category==100:control.category!=100))if(auto b=control.object.get()){Call hovered(b,L"IsHovered");hovered.invoke();if(hovered.resultInteger()){control.click();click=false;break;}}}
     if(!runtime.menuOpen)return;
     if(!redraw&&(click||mouse.x!=previousMouse.x||mouse.y!=previousMouse.y)){for(unsigned i=0;i<buttons.size();++i)if(auto b=buttons[i].object.get()){Call hovered(b,L"IsHovered");hovered.invoke();if(hovered.resultInteger()){if(focus!=i){focus=i;focusPaint();}if(click)buttons[i].click();break;}}previousMouse=mouse;}
-    if((pressed(VK_RETURN)||(edges&XINPUT_GAMEPAD_A))&&!redraw&&focus<buttons.size())buttons[focus].click();
-    previousPad=pad;previousLeft=left;previousRight=right;
+    if((pressed(VK_RETURN)||(edges&Pad::A))&&!redraw&&focus<buttons.size())buttons[focus].click();
 }
 }

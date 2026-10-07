@@ -54,6 +54,12 @@
           "members": [
             "mod.manifest"
           ]
+        },
+        {
+          "path": "native/CMakeLists.txt",
+          "pattern": "set\\(CPACK_PACKAGE_VERSION \"(?P<version>[^\"]+)\"\\)",
+          "count": 1,
+          "members": []
         }
       ],
       "excludePaths": [
@@ -63,9 +69,9 @@
       ],
       "pending": {
         "impact": "patch",
-        "rationale": "Reduce catalog and reflected-object discovery work while retaining the released consumable-animation appearance fix; reconcile release metadata.",
+        "rationale": "Direct complete Nexus1.0.2 baseline026aec27056d0e7428729905f7d136a357068f2b through current tree/new inputs reviewed: compatible catalog/reflection maintenance and diagnostics; verified pre-CommonUI controller routing repairs paused Wardrobe input with owner/focus/reconnect and balanced-gesture safety; Xbox-glyph/neutral-priming documentation and coherent CPack version metadata. Existing appearance fixes retained; no settings/save-format/API break. Final independent review cleared controller findings.",
         "majorOverride": false,
-        "reviewedInputs": "61f39767cf7a933ca45376f45068265cd27bc0d6065540d6cb46546da92f2e3a",
+        "reviewedInputs": "e4b6e3f2a3aab05a338eebd370b38c46707518377e6936097f44eee81196d786",
         "divergenceReviewed": true
       }
     }
