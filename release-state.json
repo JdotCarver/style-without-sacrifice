@@ -65,7 +65,7 @@
         "impact": "patch",
         "rationale": "Reduce catalog and reflected-object discovery work while retaining the released consumable-animation appearance fix; reconcile release metadata.",
         "majorOverride": false,
-        "reviewedInputs": "91649bcbf87e9d945b32a59acb56a55f5616e7cd0416e26cf2590e448ef2c763",
+        "reviewedInputs": "61f39767cf7a933ca45376f45068265cd27bc0d6065540d6cb46546da92f2e3a",
         "divergenceReviewed": true
       }
     }
