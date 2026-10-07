@@ -61,6 +61,10 @@ bool eligible(void* handler){
 void drain(DeviceGestures& slot,bool capture,bool cancel=false){
     auto self=binding.application&&*binding.application?static_cast<unsigned char*>(*binding.application)+0x148:nullptr;
     if(!self)return;
+    // Gesture history decides whether held axes need neutral priming. Clear
+    // the old UI sample when recapturing so an already-observed neutral is not
+    // blocked a second time by stale action state.
+    if(capture&&!slot.gestures.capturing&&slot.device==device)for(unsigned i=0;i<4;++i)state.axis(i,0);
     auto axes=slot.gestures.enter(capture);
     if(cancel){
         auto releases=slot.gestures.cancel();
@@ -179,7 +183,7 @@ ControllerSample controllerSample(){
             d.valid=valid;drain(d,focus&&valid);
         }
         state.enable(focus);
-        if(logging&&runtime.now-lastDiagnostic>=10000){lastDiagnostic=runtime.now;trace(L"Engine controller input: device="+std::to_wstring(device)+L", focused="+std::to_wstring(state.enabled)+L", received="+std::to_wstring(received)+L", consumed="+std::to_wstring(consumed)+L", rejected="+std::to_wstring(rejected)+L", device changes="+std::to_wstring(reconnects)+L", device queries="+std::to_wstring(deviceQueries)+L", enum scans="+std::to_wstring(enumScans)+L", UI ownership queries="+std::to_wstring(menuInputQueries()));}
+        if(logging&&runtime.now-lastDiagnostic>=10000){lastDiagnostic=runtime.now;trace(L"Engine controller input: device="+std::to_wstring(device)+L", focused="+std::to_wstring(state.enabled)+L", ownership="+menuInputStatus()+L", received="+std::to_wstring(received)+L", consumed="+std::to_wstring(consumed)+L", rejected="+std::to_wstring(rejected)+L", device changes="+std::to_wstring(reconnects)+L", device queries="+std::to_wstring(deviceQueries)+L", enum scans="+std::to_wstring(enumScans)+L", UI ownership queries="+std::to_wstring(menuInputQueries()));}
         auto result=state.sample();result.cancelled=cancelled;cancelled=false;return result;
     }catch(const std::exception& e){disableOnFailure(e);return {.cancelled=true};}
 }

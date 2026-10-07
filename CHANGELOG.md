@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Fix Wardrobe controls for controllers recognized by the game while the character menu is paused.
+- Restore Wardrobe item navigation and page changes with mouse, keyboard and game-recognized controllers, without clicking a tile first.
 - Reduce repeated catalog and menu object searches, and spread weapon-item discovery across frames.
 
 ## 1.0.2

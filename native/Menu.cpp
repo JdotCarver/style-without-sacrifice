@@ -25,7 +25,12 @@ std::map<std::wstring,Ref> glyphTextures;
 uint64_t shownRevision=~uint64_t{};unsigned shownFocus=~0u;bool controllerInput{},paintHints=true;
 constexpr auto frames=L"/Game/_Dawnwalker/UI/_Unified/SharedTextures/General/Frames/";
 Ref showFunction,hubGraph,createTabFunction;
-Ref inputLayer;std::array<Ref,6> inputBlockers;bool inputLayersReady{};uint64_t inputOwnershipQueries{};
+// Only layers above GameMenuLayer in the frontend may take its input.
+// GameplayDialogueLayer and TutorialLayer sit underneath it. PhotoModeLayer
+// follows the whole RootOverlay in its parent and can cover the hub.
+constexpr const wchar_t* inputBlockerNames[]={L"MenuLayer",L"ModalLayer",L"GameMenuTutorialLayer",L"PhotoModeLayer"};
+Ref inputLayer;std::array<Ref,4> inputBlockers;bool inputLayersReady{};uint64_t inputOwnershipQueries{};
+const wchar_t* inputStatus=L"not sampled";
 bool insertingTab{},orderingNavbar{};
 ScriptEvent activated,deactivated,rebuilt;
 Work injection;bool wantsOpen{},redraw{},built{};unsigned tileCursor{},popup{},focus{};
@@ -250,6 +255,16 @@ void build(){
     pendingControls.push_back({Ref(overlay),L"Cancel",[]{popup=0;redraw=true;},{866,696,188,44},100});UI::visible(overlay,false);
     built=true;redraw=true;shownRevision=~uint64_t{};
 }
+void bindInputLayers(){
+    inputLayersReady=false;
+    try{
+        Call frontend(find(L"/Script/DogwoodUI.Default__UIFrontend"),L"GetFrontend");frontend.obj(L"WorldContextObject",runtime.player.get()).invoke();auto owner=frontend.resultObject();
+        inputLayer=Ref(object(owner,L"GameMenuLayer"));
+        inputLayersReady=bool(inputLayer);
+        for(size_t i=0;i<inputBlockers.size();++i){inputBlockers[i]=Ref(object(owner,inputBlockerNames[i]));inputLayersReady=inputLayersReady&&bool(inputBlockers[i]);}
+        if(!inputLayersReady)warn(L"Controller UI ownership layers unavailable; keyboard and mouse remain available.");
+    }catch(const std::exception& e){failure(L"Controller UI ownership layers",e);}
+}
 void show(){
     wantsOpen=false;
     if(!runtime.settings.enabled||!runtime.playerReady)return;
@@ -260,15 +275,7 @@ void show(){
     // sizing and fade behavior. A missing optional background cannot block UI.
     try{Call background(object(hub,L"Background"),L"SetBackgroundTexture");auto p=background.field(L"InBackgroundTexture");if(p&&p->IsA<FSoftObjectProperty>()&&p->ImportText_Direct(L"/Game/_Dawnwalker/UI/_Unified/SharedTextures/Backgrounds/Fullscreen/T_Background_Inventory_and_InventoryStats.T_Background_Inventory_and_InventoryStats",background.value(L"InBackgroundTexture"),nullptr,0,nullptr))background.num(L"WithFadeOut",0).invoke();}catch(const std::exception& e){failure(L"Inventory background",e);}
     if(auto nav=navbar.get()){Call selectTab(nav,L"SelectTab");if(selectTab){tag(selectTab.field(L"InTabTag"),selectTab.data(),tagName);selectTab.invoke();}}
-    inputLayersReady=false;
-    try{
-        Call frontend(find(L"/Script/DogwoodUI.Default__UIFrontend"),L"GetFrontend");frontend.obj(L"WorldContextObject",runtime.player.get()).invoke();auto owner=frontend.resultObject();
-        inputLayer=Ref(object(owner,L"GameMenuLayer"));
-        const wchar_t* names[]={L"MenuLayer",L"ModalLayer",L"GameMenuTutorialLayer",L"TutorialLayer",L"PhotoModeLayer",L"GameplayDialogueLayer"};
-        inputLayersReady=bool(inputLayer);
-        for(size_t i=0;i<inputBlockers.size();++i){inputBlockers[i]=Ref(object(owner,names[i]));inputLayersReady=inputLayersReady&&bool(inputBlockers[i]);}
-        if(!inputLayersReady)warn(L"Controller UI ownership layers unavailable; keyboard and mouse remain available.");
-    }catch(const std::exception& e){failure(L"Controller UI ownership layers",e);}
+    bindInputLayers();
     runtime.menuOpen=true;runtime.model.switchSet(runtime.activeSet);wantsOpen=false;popup=0;redraw=true;beginCatalog();preview();if(logging)trace(L"Wardrobe page opened.");
     for(int i=0;i<256;++i)previousKeys[i]=(GetAsyncKeyState(i)&0x8000)!=0;
     GetCursorPos(&previousMouse);xPressed=0;stick.reset();
@@ -329,20 +336,28 @@ bool inputObjectGetter(UObject* owner,const wchar_t* name,UObject*& result){
     auto p=call.fn->GetReturnProperty();if(!p||!p->IsA<FObjectProperty>()||p->GetSize()!=sizeof(void*))return false;
     call.invoke();if(logging)++inputOwnershipQueries;result=call.resultObject();return true;
 }
+const wchar_t* menuInputStatus(){return inputStatus;}
+MenuOwnership inputOwnership(MenuOwnership result,const wchar_t* reason){inputStatus=reason;return result;}
 MenuOwnership menuOwnership(){
-    if(!runtime.menuOpen||!runtime.settings.enabled||!runtime.playerReady||!runtime.controller||!runtime.hub||!page||!menuForeground())return MenuOwnership::Blocked;
-    if(!inputLayersReady||!inputLayer)return MenuOwnership::Unavailable;
+    if(!runtime.menuOpen||!runtime.settings.enabled||!runtime.playerReady||!runtime.controller||!runtime.hub||!page)return inputOwnership(MenuOwnership::Blocked,L"Wardrobe inactive");
+    if(!menuForeground())return inputOwnership(MenuOwnership::Blocked,L"game not foreground");
+    if(!inputLayersReady||!inputLayer)return inputOwnership(MenuOwnership::Unavailable,L"frontend layers unavailable");
     try{
-        // A native Overlay need not be a Slate focus root. Test the stock
-        // frontend input layers, excluding persistent GameOverlay/HUD content.
-        for(auto& layer:inputBlockers){if(!layer)return MenuOwnership::Unavailable;UObject* top{};if(!inputObjectGetter(layer.get(),L"GetActiveWidget",top))return MenuOwnership::Unavailable;if(top)return MenuOwnership::Blocked;}
-        UObject* top{};if(!inputObjectGetter(inputLayer.get(),L"GetActiveWidget",top))return MenuOwnership::Unavailable;if(!runtime.hub.matches(top))return MenuOwnership::Blocked;
-        Call active(runtime.hub.get(),L"IsActivated");if(!active||active.fn->GetNumParms()!=1)return MenuOwnership::Unavailable;
-        auto p=active.fn->GetReturnProperty();if(!p||!p->IsA<FBoolProperty>())return MenuOwnership::Unavailable;
-        active.invoke();if(logging)++inputOwnershipQueries;if(!active.resultInteger())return MenuOwnership::Blocked;
-        if(!inputObjectGetter(object(runtime.hub.get(),L"HubSwitcher"),L"GetActiveWidget",top))return MenuOwnership::Unavailable;
-        return page.matches(top)?MenuOwnership::Owned:MenuOwnership::Blocked;
-    }catch(const std::exception& e){failure(L"Controller UI ownership",e);return MenuOwnership::Unavailable;}
+        // The gameplay dialogue HUD stays active below the hub. Its presence
+        // must not block keyboard, mouse or controller input on this page.
+        for(size_t i=0;i<inputBlockers.size();++i){
+            auto layer=inputBlockers[i].get();UObject* top{};
+            if(!layer||!inputObjectGetter(layer,L"GetActiveWidget",top))return inputOwnership(MenuOwnership::Unavailable,L"higher layer unavailable");
+            if(top)return inputOwnership(MenuOwnership::Blocked,inputBlockerNames[i]);
+        }
+        UObject* top{};if(!inputObjectGetter(inputLayer.get(),L"GetActiveWidget",top))return inputOwnership(MenuOwnership::Unavailable,L"game menu layer unavailable");
+        if(!runtime.hub.matches(top))return inputOwnership(MenuOwnership::Blocked,L"another game menu");
+        Call active(runtime.hub.get(),L"IsActivated");if(!active||active.fn->GetNumParms()!=1)return inputOwnership(MenuOwnership::Unavailable,L"hub activation unavailable");
+        auto p=active.fn->GetReturnProperty();if(!p||!p->IsA<FBoolProperty>())return inputOwnership(MenuOwnership::Unavailable,L"hub activation schema unavailable");
+        active.invoke();if(logging)++inputOwnershipQueries;if(!active.resultInteger())return inputOwnership(MenuOwnership::Blocked,L"hub inactive");
+        if(!inputObjectGetter(object(runtime.hub.get(),L"HubSwitcher"),L"GetActiveWidget",top))return inputOwnership(MenuOwnership::Unavailable,L"hub page unavailable");
+        return page.matches(top)?inputOwnership(MenuOwnership::Owned,L"Wardrobe"):inputOwnership(MenuOwnership::Blocked,L"another hub tab");
+    }catch(const std::exception& e){failure(L"Controller UI ownership",e);return inputOwnership(MenuOwnership::Unavailable,L"ownership query failed");}
 }
 bool menuControllerFocused(){return menuOwnership()==MenuOwnership::Owned;}
 bool menuKeyboardFocused(){

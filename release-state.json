@@ -69,9 +69,9 @@
       ],
       "pending": {
         "impact": "patch",
-        "rationale": "Direct complete Nexus1.0.2 baseline026aec27056d0e7428729905f7d136a357068f2b through current tree/new inputs reviewed: compatible catalog/reflection maintenance and diagnostics; verified pre-CommonUI controller routing repairs paused Wardrobe input with owner/focus/reconnect and balanced-gesture safety; Xbox-glyph/neutral-priming documentation and coherent CPack version metadata. Existing appearance fixes retained; no settings/save-format/API break. Final independent review cleared controller findings.",
+        "rationale": "Complete direct Nexus 1.0.2 baseline delta reviewed: compatible catalog/reflection caching and timing; game-recognized paused controller routing; fix persistent lower HUD/tutorial layers blocking every Wardrobe input mode while preserving all four higher blockers; retain neutral-axis history and clear stale action samples; diagnostics and controls documentation. Generated native output rebuilt twice and verified. Appearance behavior, setting keys, saves and public APIs remain compatible.",
         "majorOverride": false,
-        "reviewedInputs": "e4b6e3f2a3aab05a338eebd370b38c46707518377e6936097f44eee81196d786",
+        "reviewedInputs": "b6d364f442b8dffabacdf451b74f8a2aebca250590d1499432e580ce5252ea98",
         "divergenceReviewed": true
       }
     }
