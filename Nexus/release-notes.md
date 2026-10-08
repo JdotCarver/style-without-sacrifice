@@ -1,4 +1,4 @@
-- Restore Wardrobe item navigation and page changes with mouse, keyboard and game-recognized controllers, without clicking a tile first.
-- Reduce repeated work while opening and browsing the appearance catalog.
+# Style Without Sacrifice 1.1.0
 
-- Choose how much troubleshooting detail to record with five Logging levels.
+- Restore Wardrobe item navigation and page changes with mouse, keyboard and controllers, without clicking a tile first.
+- Choose Off, Error, Warning, Info or Debug logging; Warning is the default.

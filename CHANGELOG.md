@@ -1,17 +1,13 @@
-# Changelog
+## 1.1.0
 
+- Restore Wardrobe item navigation and page changes with mouse, keyboard and controllers, without clicking a tile first.
 - Choose Off, Error, Warning, Info or Debug logging; Warning is the default.
 
-## Unreleased
-
-- Apply logging-level changes immediately, including turning off detailed messages.
-
-- Restore Wardrobe item navigation and page changes with mouse, keyboard and game-recognized controllers, without clicking a tile first.
-- Reduce repeated catalog and menu object searches, and spread weapon-item discovery across frames.
+# Changelog
 
 ## 1.0.2
 
-- Keep the selected weapon and scabbard appearance throughout consumable animations, including repeated drinks, while preserving normal visibility and original weapon sizing.
+- Fix weapon and scabbard appearances briefly reverting while consuming items.
 
 ## 1.0.1
 

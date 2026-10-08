@@ -1,6 +1,6 @@
 {
   "name": "Style Without Sacrifice - Your Transmogrification Wardrobe",
-  "version": "1.1.0-dev",
+  "version": "1.1.0",
   "fileName": "Style-Without-Sacrifice.zip",
   "game": "thebloodofdawnwalker",
   "requirements": [
@@ -33,5 +33,6 @@
   "allowModManagerDownload": true,
   "primaryModManagerDownload": true,
   "fileDisplayName": "Style Without Sacrifice",
-  "requirementsMode": "file-to-file"
+  "requirementsMode": "file-to-file",
+  "summary": "A Wardrobe tab for your equipment's appearance, with separate day and night outfits, three saved presets, a character preview and Mod Setting Menu controls."
 }

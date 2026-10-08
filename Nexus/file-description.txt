@@ -1,2 +1,2 @@
-Fix Wardrobe controls for controllers recognized by the game while the character menu is paused.
-Reduce repeated work while opening and browsing the appearance catalog.
+Restore Wardrobe item navigation and page changes with mouse, keyboard and controllers, without clicking a tile first.
+Choose Off, Error, Warning, Info or Debug logging; Warning is the default.
