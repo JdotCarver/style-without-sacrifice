@@ -8,20 +8,21 @@
       "packageFormat": 1,
       "baseline": {
         "kind": "nexus",
-        "version": "1.1.0",
-        "normalizedVersion": "1.1.0",
-        "sourceCommit": "a11acdd0d7e971336893b1a58415af4bb9dc90a4",
-        "archiveSha256": "94b496bbfaf83f17c6b8a7b8fe52a82696d3d9f3b9b4c9694ab8d29387ca2a49",
-        "sourceFingerprint": "3602f983bee11e70389be94661ce5a0f3dc2aae5c8a4aa87e7e65c1945cc6a5d",
-        "verifiedAt": "2026-10-09T09:54:44.505339+00:00",
+        "version": "1.1.1",
+        "normalizedVersion": "1.1.1",
+        "sourceCommit": "69738c113a4923cc63eb56ede5332742fbfbd082",
+        "sourceTag": "v1.1.1",
+        "archiveSha256": "1ba63102386db7c4d81ac4e172dd9952185b8d72ee47e600201d78a6c8a9efd4",
+        "verifiedAt": "2026-10-09T10:10:19.5638793Z",
         "nexus": {
           "game": "thebloodofdawnwalker",
           "pageId": "721",
+          "versionId": "41742787153021",
           "modId": "41742787150545",
           "fileChainId": "8084433",
-          "versionId": "41742787153002",
-          "siteFileId": "3178"
-        }
+          "siteFileId": "3197"
+        },
+        "sourceFingerprint": "d012134dc8aef5894c1e3034a0f55359f86f3754637b696034d24ec3c448c305"
       },
       "bindings": [
         {
@@ -68,11 +69,31 @@
         "VortexExtension"
       ],
       "pending": {
-        "impact": "patch",
-        "rationale": "Complete direct verified Nexus 1.1.0 delta: correct D-pad grid navigation, restore controller page prompts with right-stick Up/Down paging, and accept compatible controller entry points despite unrelated downstream code differences. Preserve all settings and saved appearances. Correct controls/logging copy and include existing logging scripts in public CPack builds. These are compatible controller, documentation and packaging fixes; greatest remaining impact is patch.",
+        "impact": "none",
+        "rationale": "Matches the verified Nexus release.",
         "majorOverride": false,
         "reviewedInputs": "d012134dc8aef5894c1e3034a0f55359f86f3754637b696034d24ec3c448c305",
         "divergenceReviewed": false
+      },
+      "publication": {
+        "nexus": {
+          "destination": "nexus",
+          "verified": true,
+          "verifiedAt": "2026-10-09T10:10:19.5638793Z",
+          "version": "1.1.1",
+          "sourceCommit": "69738c113a4923cc63eb56ede5332742fbfbd082",
+          "tag": "v1.1.1",
+          "archiveSha256": "1ba63102386db7c4d81ac4e172dd9952185b8d72ee47e600201d78a6c8a9efd4",
+          "nexus": {
+            "game": "thebloodofdawnwalker",
+            "pageId": "721",
+            "versionId": "41742787153021",
+            "modId": "41742787150545",
+            "fileChainId": "8084433",
+            "siteFileId": "3197"
+          },
+          "url": "https://www.nexusmods.com/thebloodofdawnwalker/mods/721"
+        }
       }
     }
   }
