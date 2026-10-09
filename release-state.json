@@ -8,20 +8,21 @@
       "packageFormat": 1,
       "baseline": {
         "kind": "nexus",
-        "version": "1.0.2",
-        "normalizedVersion": "1.0.2",
-        "sourceCommit": "026aec27056d0e7428729905f7d136a357068f2b",
-        "sourceTag": "v1.0.2",
-        "archiveSha256": "c800d7613c0157e4da760eed4c34cf7902cb414fa04f13b0fb2ed6c5b7d4573a",
-        "verifiedAt": "2026-10-07T12:13:18.0320211Z",
+        "version": "1.1.1",
+        "normalizedVersion": "1.1.1",
+        "sourceCommit": "69738c113a4923cc63eb56ede5332742fbfbd082",
+        "sourceTag": "v1.1.1",
+        "archiveSha256": "1ba63102386db7c4d81ac4e172dd9952185b8d72ee47e600201d78a6c8a9efd4",
+        "verifiedAt": "2026-10-09T10:10:19.5638793Z",
         "nexus": {
           "game": "thebloodofdawnwalker",
           "pageId": "721",
+          "versionId": "41742787153021",
           "modId": "41742787150545",
           "fileChainId": "8084433",
-          "versionId": "41742787152968",
-          "siteFileId": "3144"
-        }
+          "siteFileId": "3197"
+        },
+        "sourceFingerprint": "d012134dc8aef5894c1e3034a0f55359f86f3754637b696034d24ec3c448c305"
       },
       "bindings": [
         {
@@ -68,11 +69,31 @@
         "VortexExtension"
       ],
       "pending": {
-        "impact": "minor",
-        "rationale": "Complete direct baseline delta reviewed. Retains preceding scope: Complete direct Nexus 1.0.2 baseline delta reviewed: compatible catalog/reflection caching and timing; game-recognized paused controller routing; fix persistent lower HUD/tutorial layers blocking every Wardrobe input mode while preserving all four higher blockers; retain neutral-axis history and clear stale action samples; diagnostics and controls documentation. Generated native output rebuilt twice and verified. Appearance behavior, setting keys, saves and public APIs remain compatible. Adds compatible cumulative Logging Off/Error/Warning/Info/Debug, default Warning, preference migration and local unchanged-library output boundaries; native logging ABI coordinated with rebuilt DLLs. New option makes the full remaining delta minor. Review follow-up: native trace checks the immediate atomic output level during queued Debug-to-Off transitions. Release preparation: verified unchanged live Nexus baseline on 2026-10-08; consolidated complete player changelog and preserved published page formatting/history.",
+        "impact": "none",
+        "rationale": "Matches the verified Nexus release.",
         "majorOverride": false,
-        "reviewedInputs": "3602f983bee11e70389be94661ce5a0f3dc2aae5c8a4aa87e7e65c1945cc6a5d",
-        "divergenceReviewed": true
+        "reviewedInputs": "d012134dc8aef5894c1e3034a0f55359f86f3754637b696034d24ec3c448c305",
+        "divergenceReviewed": false
+      },
+      "publication": {
+        "nexus": {
+          "destination": "nexus",
+          "verified": true,
+          "verifiedAt": "2026-10-09T10:10:19.5638793Z",
+          "version": "1.1.1",
+          "sourceCommit": "69738c113a4923cc63eb56ede5332742fbfbd082",
+          "tag": "v1.1.1",
+          "archiveSha256": "1ba63102386db7c4d81ac4e172dd9952185b8d72ee47e600201d78a6c8a9efd4",
+          "nexus": {
+            "game": "thebloodofdawnwalker",
+            "pageId": "721",
+            "versionId": "41742787153021",
+            "modId": "41742787150545",
+            "fileChainId": "8084433",
+            "siteFileId": "3197"
+          },
+          "url": "https://www.nexusmods.com/thebloodofdawnwalker/mods/721"
+        }
       }
     }
   }

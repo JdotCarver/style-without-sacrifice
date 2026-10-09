@@ -4,7 +4,7 @@
 #include <cstdint>
 namespace Wardrobe {
 namespace Pad {
-inline constexpr uint16_t Up=1,Down=2,Left=4,Right=8,Menu=16,LStick=64,RStick=128,A=4096,B=8192,X=16384,Y=32768;
+inline constexpr uint16_t Up=1,Down=2,Left=4,Right=8,Menu=16,PageUp=32,LStick=64,RStick=128,PageDown=256,A=4096,B=8192,X=16384,Y=32768;
 }
 struct ControllerSample {uint16_t buttons{},edges{};int x{},y{};bool left{},right{},leftEdge{},rightEdge{},cancelled{};};
 // Owned engine events only. No borrowed FKey, FInputEvent, frame or UObject is
@@ -28,6 +28,13 @@ struct ControllerState {
         if(!std::isfinite(value))value=0;
         value=std::clamp(value,-1.f,1.f);
         if(axis<2){(axis?y:x)=static_cast<int>(value*32767.f);if(std::max(std::abs(x),std::abs(y))<9000)blockStick=false;}
+        else if(axis==4){
+            // One page per right-stick tilt. Hysteresis prevents chatter near
+            // the activation threshold, while short flicks retain their edge.
+            constexpr float release=9000.f/32767.f;
+            button(Pad::PageUp,value>((held&Pad::PageUp)?release:.5f),false);
+            button(Pad::PageDown,value<-((held&Pad::PageDown)?release:.5f),false);
+        }
         else {bool down=value>.5f;bool& old=axis==2?left:right;bool& block=axis==2?blockLeft:blockRight;bool& edge=axis==2?leftEdge:rightEdge;
             if(!down)block=false;if(enabled&&down&&!old&&!block)edge=true;old=down;}
     }

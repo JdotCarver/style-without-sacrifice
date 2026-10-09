@@ -139,12 +139,12 @@ void inputHints(){
         case 16:value=L"Hide slot";key=L"F";pad=L"L_Press";break;
         case 17:key=L"A";pad=L"LT";break;
         case 18:key=L"D";pad=L"RT";break;
-        case 19:value=L"Previous";key=L"PgUp";pad=L"Dpad_Left";break;
-        case 20:value=L"Next";key=L"PgDn";pad=L"Dpad_Right";break;
+        case 19:value=L"Previous";key=L"PgUp";pad=L"R_Up";break;
+        case 20:value=L"Next";key=L"PgDn";pad=L"R_Down";break;
         case 100:value=L"Cancel";key=L"Esc";pad=L"B";break;
         }
         if(value&&c.label)setText(c.label.get(),L"SetText",value);
-        if(key&&c.glyph)UI::texture(c.glyph.get(),promptGlyph(key,pad));
+        if(key&&c.glyph){UI::visible(c.glyph.get(),!controllerInput||pad);if(!controllerInput||pad)UI::texture(c.glyph.get(),promptGlyph(key,pad));}
         if(c.category==16)setNumber(c.object.get(),L"SetIsEnabled",L"bInIsEnabled",hideAllowed(static_cast<Slot>(runtime.model.category)));
     }paintHints=false;
 }
@@ -454,8 +454,8 @@ void stepMenu(){
     if(paintHints)inputHints();
     bool escape=pressed(VK_ESCAPE)||(edges&Pad::B);if(escape){if(popup){popup=0;redraw=true;}else closeMenu();xPressed=0;return;}
     if(!popup){
-    bool previousPage=pressed(VK_PRIOR)||(edges&Pad::Left);
-    bool nextPage=pressed(VK_NEXT)||(edges&Pad::Right);
+    bool previousPage=pressed(VK_PRIOR)||(edges&Pad::PageUp);
+    bool nextPage=pressed(VK_NEXT)||(edges&Pad::PageDown);
     if(previousPage||nextPage){
         changePage(previousPage?-1:1);
         // Consume even a boundary press so a simultaneous stick/confirm input
@@ -477,8 +477,8 @@ void stepMenu(){
     else xPressed=0;
     if(redraw)return;
     int navigation{};
-    if(pressed(VK_LEFT))navigation=-1;
-    else if(pressed(VK_RIGHT))navigation=1;
+    if(pressed(VK_LEFT)||(edges&Pad::Left))navigation=-1;
+    else if(pressed(VK_RIGHT)||(edges&Pad::Right))navigation=1;
     else if(pressed(VK_UP)||(edges&Pad::Up))navigation=popup?-1:-int(Layout::columns);
     else if(pressed(VK_DOWN)||(edges&Pad::Down))navigation=popup?1:int(Layout::columns);
     else if(analog)navigation=analog==1?1:analog==-1?-1:analog==-2?(popup?-1:-int(Layout::columns)):(popup?1:int(Layout::columns));

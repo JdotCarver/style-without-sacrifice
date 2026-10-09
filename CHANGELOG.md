@@ -1,10 +1,16 @@
+# Changelog
+
+## 1.1.1
+
+- Fix D-pad navigation so Left / Right moves between items and Up / Down moves between rows.
+- Change pages with right-stick Up / Down and show matching Previous / Next indicators.
+- Fix controller input being disabled on otherwise compatible game builds.
+
 ## 1.1.0
 
 - Restore Wardrobe item navigation and page changes with mouse, keyboard and controllers, without clicking a tile first.
 - Choose Off, Error, Warning, Info or Debug logging; Warning is the default.
 - Show the mod's logo in Mod Setting Menu.
-
-# Changelog
 
 ## 1.0.2
 
