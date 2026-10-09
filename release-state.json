@@ -69,9 +69,9 @@
       ],
       "pending": {
         "impact": "minor",
-        "rationale": "Complete direct baseline delta reviewed. Retains preceding scope: Complete direct Nexus 1.0.2 baseline delta reviewed: compatible catalog/reflection caching and timing; game-recognized paused controller routing; fix persistent lower HUD/tutorial layers blocking every Wardrobe input mode while preserving all four higher blockers; retain neutral-axis history and clear stale action samples; diagnostics and controls documentation. Generated native output rebuilt twice and verified. Appearance behavior, setting keys, saves and public APIs remain compatible. Adds compatible cumulative Logging Off/Error/Warning/Info/Debug, default Warning, preference migration and local unchanged-library output boundaries; native logging ABI coordinated with rebuilt DLLs. New option makes the full remaining delta minor. Review follow-up: native trace checks the immediate atomic output level during queued Debug-to-Off transitions. Release preparation: verified unchanged live Nexus baseline on 2026-10-08; consolidated complete player changelog and preserved published page formatting/history.",
+        "rationale": "Complete direct Nexus 1.0.2 delta reviewed: compatible catalog/reflection caching and timings; paused game-recognized controller routing; higher-layer ownership and neutral-history corrections; cumulative Logging levels with preference migration. This correction maps all D-pad directions to grid navigation and narrows controller compatibility to the current application, device-aware handler entries and used ABI/value/layout requirements, preserving input across unrelated downstream code changes; fragmented readable registration data is supported. Player control/logging docs and CPack logging payload corrected. Existing saves, appearance data and settings remain compatible; no game version or storefront gate. Greatest remaining impact remains minor.",
         "majorOverride": false,
-        "reviewedInputs": "3602f983bee11e70389be94661ce5a0f3dc2aae5c8a4aa87e7e65c1945cc6a5d",
+        "reviewedInputs": "e363c562226c9e28248ef89b21a22ea7a16da7d75e5575d30f69b3fbe704e816",
         "divergenceReviewed": true
       }
     }
