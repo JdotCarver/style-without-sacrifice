@@ -139,8 +139,8 @@ void inputHints(){
         case 16:value=L"Hide slot";key=L"F";pad=L"L_Press";break;
         case 17:key=L"A";pad=L"LT";break;
         case 18:key=L"D";pad=L"RT";break;
-        case 19:value=L"Previous";key=L"PgUp";break;
-        case 20:value=L"Next";key=L"PgDn";break;
+        case 19:value=L"Previous";key=L"PgUp";pad=L"R_Up";break;
+        case 20:value=L"Next";key=L"PgDn";pad=L"R_Down";break;
         case 100:value=L"Cancel";key=L"Esc";pad=L"B";break;
         }
         if(value&&c.label)setText(c.label.get(),L"SetText",value);
@@ -454,8 +454,8 @@ void stepMenu(){
     if(paintHints)inputHints();
     bool escape=pressed(VK_ESCAPE)||(edges&Pad::B);if(escape){if(popup){popup=0;redraw=true;}else closeMenu();xPressed=0;return;}
     if(!popup){
-    bool previousPage=pressed(VK_PRIOR);
-    bool nextPage=pressed(VK_NEXT);
+    bool previousPage=pressed(VK_PRIOR)||(edges&Pad::PageUp);
+    bool nextPage=pressed(VK_NEXT)||(edges&Pad::PageDown);
     if(previousPage||nextPage){
         changePage(previousPage?-1:1);
         // Consume even a boundary press so a simultaneous stick/confirm input

@@ -69,9 +69,9 @@
       ],
       "pending": {
         "impact": "minor",
-        "rationale": "Complete direct Nexus 1.0.2 delta reviewed: compatible catalog/reflection caching and timings; paused game-recognized controller routing; higher-layer ownership and neutral-history corrections; cumulative Logging levels with preference migration. This correction maps all D-pad directions to grid navigation and narrows controller compatibility to the current application, device-aware handler entries and used ABI/value/layout requirements, preserving input across unrelated downstream code changes; fragmented readable registration data is supported. Player control/logging docs and CPack logging payload corrected. Existing saves, appearance data and settings remain compatible; no game version or storefront gate. Greatest remaining impact remains minor.",
+        "rationale": "Complete direct Nexus 1.0.2 delta reviewed: compatible catalog/reflection caching and timings; paused game-recognized controller routing; higher-layer ownership and neutral-history corrections; cumulative Logging levels with preference migration. This correction maps all D-pad directions to grid navigation and narrows controller compatibility to the current application, device-aware handler entries and used ABI/value/layout requirements, preserving input across unrelated downstream code changes; fragmented readable registration data is supported. Player control/logging docs and CPack logging payload corrected. Existing saves, appearance data and settings remain compatible; no game version or storefront gate. Greatest remaining impact remains minor. Previous/Next page prompts are restored with right-stick Up/Down shortcuts, neutral-entry protection and one action per tilt; D-pad grid navigation remains intact.",
         "majorOverride": false,
-        "reviewedInputs": "e363c562226c9e28248ef89b21a22ea7a16da7d75e5575d30f69b3fbe704e816",
+        "reviewedInputs": "c51418e5733c8ac1cc1f8863e4ff1851cf49de848e8f1f247d846fd97b26df48",
         "divergenceReviewed": true
       }
     }

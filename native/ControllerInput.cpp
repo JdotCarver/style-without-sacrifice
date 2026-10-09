@@ -24,7 +24,7 @@ ControllerState state;Ref owner,connectionEnum;int32_t device=-1;int connectedVa
 struct DeviceGestures {int32_t device=-1,user=-1;ControllerGestures gestures;bool valid{};};std::array<DeviceGestures,4> devices;
 uint64_t lastDiagnostic{},received{},consumed{},rejected{},reconnects{},deviceQueries{},enumScans{};bool failed{},cancelled{};
 struct Key {uint64_t name{};uint16_t button{};int axis=-1;};
-std::array<Key,21> keys;
+std::array<Key,24> keys;
 void key(unsigned i,const wchar_t* text,uint16_t button,int axis=-1){
     static_assert(sizeof(FName)==8);FName name(text);std::memcpy(&keys[i].name,&name,8);keys[i].button=button;keys[i].axis=axis;
 }
@@ -64,14 +64,14 @@ void drain(DeviceGestures& slot,bool capture,bool cancel=false){
     // Gesture history decides whether held axes need neutral priming. Clear
     // the old UI sample when recapturing so an already-observed neutral is not
     // blocked a second time by stale action state.
-    if(capture&&!slot.gestures.capturing&&slot.device==device)for(unsigned i=0;i<4;++i)state.axis(i,0);
+    if(capture&&!slot.gestures.capturing&&slot.device==device)for(unsigned i=0;i<ControllerGestures::axisCount;++i)state.axis(i,0);
     auto axes=slot.gestures.enter(capture);
     if(cancel){
         auto releases=slot.gestures.cancel();
         for(unsigned i=0;i<keys.size();++i)if(releases&(1u<<i))originalReleased(self,keys[i].name,slot.user,slot.device,false);
-        for(unsigned i=0;i<4;++i)if(slot.gestures.axes[i]!=0){axes|=1u<<i;slot.gestures.axes[i]=0;}
+        for(unsigned i=0;i<ControllerGestures::axisCount;++i)if(slot.gestures.axes[i]!=0){axes|=1u<<i;slot.gestures.axes[i]=0;}
     }
-    for(unsigned i=0;i<4;++i)if(axes&(1u<<i))originalAnalog(self,keys[11+i].name,slot.user,slot.device,0);
+    for(unsigned i=0;i<ControllerGestures::axisCount;++i)if(axes&(1u<<i))originalAnalog(self,keys[11+i].name,slot.user,slot.device,0);
 }
 DeviceGestures* prepare(int32_t id,int32_t user){
     if(failed){for(auto& d:devices)if(d.device==id){drain(d,false);return &d;}return nullptr;}
@@ -106,7 +106,7 @@ bool analog(void* self,uint64_t name,int32_t user,int32_t id,float value){
             if(slot->gestures.capturing){
                 // Most-recent meaningful input owns navigation. Another owned
                 // device's idle/neutral events cannot repeatedly steal it.
-                if(std::abs(v)>(k->axis<2?9000.f/32767.f:.5f))adoptDevice(id);
+                if(std::abs(v)>ControllerGestures::threshold(static_cast<unsigned>(k->axis)))adoptDevice(id);
                 if(device==id)state.axis(static_cast<unsigned>(k->axis),v);
                 if(logging)++consumed;return true;
             }
@@ -137,10 +137,12 @@ void startControllerInput(){
     key(4,L"Gamepad_Special_Right",Pad::Menu);key(5,L"Gamepad_LeftThumbstick",Pad::LStick);key(6,L"Gamepad_RightThumbstick",Pad::RStick);
     key(7,L"Gamepad_FaceButton_Bottom",Pad::A);key(8,L"Gamepad_FaceButton_Right",Pad::B);key(9,L"Gamepad_FaceButton_Left",Pad::X);key(10,L"Gamepad_FaceButton_Top",Pad::Y);
     key(11,L"Gamepad_LeftX",0,0);key(12,L"Gamepad_LeftY",0,1);key(13,L"Gamepad_LeftTriggerAxis",0,2);key(14,L"Gamepad_RightTriggerAxis",0,3);
+    key(15,L"Gamepad_RightY",0,4);
     // Devices emit these digital keys as well as axes. Consume them without a
     // second action so Slate cannot also navigate the focused stock widget.
-    key(15,L"Gamepad_LeftStick_Up",0);key(16,L"Gamepad_LeftStick_Down",0);key(17,L"Gamepad_LeftStick_Left",0);key(18,L"Gamepad_LeftStick_Right",0);
-    key(19,L"Gamepad_LeftTrigger",0);key(20,L"Gamepad_RightTrigger",0);
+    key(16,L"Gamepad_LeftStick_Up",0);key(17,L"Gamepad_LeftStick_Down",0);key(18,L"Gamepad_LeftStick_Left",0);key(19,L"Gamepad_LeftStick_Right",0);
+    key(20,L"Gamepad_LeftTrigger",0);key(21,L"Gamepad_RightTrigger",0);
+    key(22,L"Gamepad_RightStick_Up",0);key(23,L"Gamepad_RightStick_Down",0);
     // Stock bumpers remain available for hub tab navigation.
     std::wstring error;binding=ControllerContract::resolve(error);
     if(!binding.targets[0]){warn(L"Engine controller input unavailable: "+error+L". Keyboard and mouse remain available.");return;}

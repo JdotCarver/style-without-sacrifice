@@ -8,15 +8,16 @@ namespace Wardrobe {
 // and a captured press must never leak a release into a later game/menu context.
 struct ControllerGestures {
     uint32_t down{},forwarded{},captured{};bool capturing{};
-    std::array<float,4> axes{},values{};
-    std::array<bool,4> observed{},neutral{true,true,true,true};
-    static float threshold(unsigned index){return index<2?9000.f/32767.f:.5f;}
+    static constexpr unsigned axisCount=5;
+    std::array<float,axisCount> axes{},values{};
+    std::array<bool,axisCount> observed{},neutral{true,true,true,true,true};
+    static float threshold(unsigned index){return index<2||index==4?9000.f/32767.f:.5f;}
     uint32_t enter(bool capture){
         if(capture==capturing)return 0;capturing=capture;
         // Drivers may emit axes only when they change. Retain neutral samples
         // received before opening the tab; do not discard the first movement.
-        for(unsigned i=0;i<4;++i)neutral[i]=!observed[i]||std::abs(values[i])>threshold(i);
-        uint32_t drain{};if(capture)for(unsigned i=0;i<4;++i)if(axes[i]!=0){drain|=1u<<i;axes[i]=0;}
+        for(unsigned i=0;i<axisCount;++i)neutral[i]=!observed[i]||std::abs(values[i])>threshold(i);
+        uint32_t drain{};if(capture)for(unsigned i=0;i<axisCount;++i)if(axes[i]!=0){drain|=1u<<i;axes[i]=0;}
         return drain;
     }
     // True means this gesture belongs to Wardrobe, even for its later release.

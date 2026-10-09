@@ -22,7 +22,7 @@ Designed for game patch **1.0.5**. Requires [UE4SS for Dawnwalker by Vercadi](ht
 | Open Wardrobe | End, configurable | Select the Wardrobe hub tab |
 | Change category | A / D | Left / right trigger |
 | Select a look | Arrow keys, Enter | D-pad or left stick, A |
-| Change page | Page Up / Page Down | Move past the first or last item with the D-pad or left stick |
+| Change page | Page Up / Page Down | Right stick Up / Down |
 | Day / night preview | P | Start / Menu |
 | Collected / all looks | Y | Right stick click |
 | Hide supported slot | F | Left stick click |
@@ -32,7 +32,7 @@ Designed for game patch **1.0.5**. Requires [UE4SS for Dawnwalker by Vercadi](ht
 
 Wardrobe uses the game's controller input, including while the character menu is paused. It does not require a particular XInput slot or add controller drivers. The game must recognize your controller first. Controller names in this table and the on-screen prompts remain **Xbox-style**, including when using a PlayStation controller; PlayStation symbols are not provided. You can browse items and change pages as soon as Wardrobe opens, without clicking a tile first. If the stick or a trigger was held while entering the tab or reconnecting, release it before navigating.
 
-All actions also have on-screen mouse controls. The action hints use the game's keyboard and Xbox glyphs and follow the active input device. D-pad Left / Right moves one item horizontally; Up / Down moves one row vertically. Moving beyond a page continues onto the adjacent page. Hold the left stick to repeat item movement; vertical navigation preserves the column when crossing pages. Changing the previewed day/night set does not change your active equipment loadout. Each page holds up to 36 choices; focus a tile to see its name below the grid. The equipment panel shows the displayed outfit, with the selected category's name underneath. NPC appearances without an inventory image use their category symbol.
+All actions also have on-screen mouse controls. The action hints use the game's keyboard and Xbox glyphs and follow the active input device. D-pad Left / Right moves one item horizontally; Up / Down moves one row vertically. Tilt the right stick up for Previous or down for Next; the page buttons show matching indicators. Each tilt changes one page, so release the stick before paging again. Moving beyond a page with the D-pad or left stick also continues onto the adjacent page. Hold the left stick to repeat item movement; vertical navigation preserves the column when crossing pages. Changing the previewed day/night set does not change your active equipment loadout. Each page holds up to 36 choices; focus a tile to see its name below the grid. The equipment panel shows the displayed outfit, with the selected category's name underneath. NPC appearances without an inventory image use their category symbol.
 
 Within each category, **Player Outfits** with inventory icons appear first, followed by **NPC Outfits** without item icons. Both groups sort alphabetically by their displayed names, ignoring case. Each group starts on its own page and has a small heading above the grid. **Original look** and **Hide**, where available, stay at the front of the list. The same order applies when filtering collected looks.
 
