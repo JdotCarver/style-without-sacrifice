@@ -1,6 +1,5 @@
-# Style Without Sacrifice 1.1.0-dev
+# Style Without Sacrifice 1.1.1
 
-- Navigate Wardrobe items in all four directions with the D-pad or left stick, including across pages and in outfit dialogs.
-- Restore Previous / Next controller indicators and change pages with right-stick Up / Down.
-- Keep controller input available when compatible game builds differ in unrelated UI code.
-- Choose Off, Error, Warning, Info or Debug logging; Warning is the default.
+- Fix D-pad navigation so Left / Right moves between items and Up / Down moves between rows.
+- Change pages with right-stick Up / Down and show matching Previous / Next indicators.
+- Fix controller input being disabled on otherwise compatible game builds.

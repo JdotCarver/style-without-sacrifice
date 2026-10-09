@@ -1,11 +1,15 @@
-## 1.1.0-dev
-
-- Navigate Wardrobe items in all four directions with the D-pad or left stick, including across pages and in outfit dialogs.
-- Restore Previous / Next controller indicators and change pages with right-stick Up / Down.
-- Keep controller input available when compatible game builds differ in unrelated UI code.
-- Choose Off, Error, Warning, Info or Debug logging; Warning is the default.
-
 # Changelog
+
+## 1.1.1
+
+- Fix D-pad navigation so Left / Right moves between items and Up / Down moves between rows.
+- Change pages with right-stick Up / Down and show matching Previous / Next indicators.
+- Fix controller input being disabled on otherwise compatible game builds.
+
+## 1.1.0
+
+- Restore Wardrobe item navigation and page changes with mouse, keyboard and controllers, without clicking a tile first.
+- Choose Off, Error, Warning, Info or Debug logging; Warning is the default.
 
 ## 1.0.2
 
