@@ -70,9 +70,9 @@
       ],
       "pending": {
         "impact": "patch",
-        "rationale": "Complete verified Nexus 1.1.1 delta: fix reference-parameter pickups and collection reconciliation for backpack, equipment, stash and late weapons; recover after loading completion and avoid main-menu retries. Preserve settings, saved appearances and native cosmetic behavior. Update player-facing collection documentation and release copy. Rebuilt release-version DLL is behavior-identical to tested 669bdda.",
+        "rationale": "Complete verified Nexus 1.1.1 delta: collection and load recovery fixes, with the approved concise player-facing collection description. Native code and tested DLL unchanged from the prepared 1.1.2 release.",
         "majorOverride": false,
-        "reviewedInputs": "8c5d4c4eca891936b455cbb4667ed92cb9d1bbb1a6cd73e9ab985bdafea5f54c",
+        "reviewedInputs": "f2c5d03db24c7d5059d05d98fd7bc43b64a56bbb079e262cc38fb1f2a42e5280",
         "divergenceReviewed": false
       },
       "publication": {
