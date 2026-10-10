@@ -51,6 +51,7 @@ bool inventoryDirty=true;
 uint64_t inventoryDue{};unsigned inventoryCursor{};
 bool inventoryScanning{};unsigned inventoryPhase{};uint64_t inventoryGeneration{};
 Ref scanOwner;
+std::vector<Ref> inventoryItems;bool inventoryCaptured{};
 struct ItemRow {Ref item;std::wstring row;};
 std::unordered_map<UObject*,ItemRow> itemLookup;
 struct MeshEdit {Ref component,original,installed;bool visible{},appliedVisible{},changedMesh{},changedVisibility{};std::optional<MeshScale> originalScale,installedScale;};
@@ -378,8 +379,8 @@ void resetCosmetics(bool restore){
             if(count)trace(L"Releasing weapon appearance edits for player context: "+std::to_wstring(count));}
         restoreMeshes();
     }
-    meshEdits={};preparedChoices={};inventoryDirty=true;inventoryScanning=false;scanOwner={};++inventoryGeneration;inventorySystem={};runtime.storage={};addedItems.clear();inventoryCursor=0;inventoryDue=0;runtime.playerRefresh=runtime.previewRefresh=false;for(auto& set:overrides)for(auto& row:set)row.reset();subsystem={};clothingTable={};weaponTable={};rowType={};weaponType={};slotProperty=nullptr;weapons={};weaponMesh={};scabbardMesh={};weaponScale={};catalogStarted=false;runtime.catalogReady=runtime.playerReady=false;runtime.looks.clear();itemLookup.clear();lastLoadoutFrame=~0ull;}
-void cancelCosmeticWork(){catalogStarted=false;inventoryDirty=false;addedItems.clear();inventoryScanning=false;scanOwner={};++inventoryGeneration;runtime.refreshWork.cancel();runtime.playerRefresh=runtime.previewRefresh=false;}
+    meshEdits={};preparedChoices={};inventoryDirty=true;inventoryScanning=false;scanOwner={};inventoryItems.clear();inventoryCaptured=false;++inventoryGeneration;inventorySystem={};runtime.storage={};addedItems.clear();inventoryCursor=0;inventoryDue=0;runtime.playerRefresh=runtime.previewRefresh=false;for(auto& set:overrides)for(auto& row:set)row.reset();subsystem={};clothingTable={};weaponTable={};rowType={};weaponType={};slotProperty=nullptr;weapons={};weaponMesh={};scabbardMesh={};weaponScale={};catalogStarted=false;runtime.catalogReady=runtime.playerReady=false;runtime.looks.clear();itemLookup.clear();lastLoadoutFrame=~0ull;}
+void cancelCosmeticWork(){catalogStarted=false;inventoryDirty=false;addedItems.clear();inventoryScanning=false;scanOwner={};inventoryItems.clear();inventoryCaptured=false;++inventoryGeneration;runtime.refreshWork.cancel();runtime.playerRefresh=runtime.previewRefresh=false;}
 bool attach(UObject* pawn){
     MeasureOperation timing(Operation::Attach);
     if(!pawn)return false;auto controller=object(pawn,L"Controller");if(!controller||!object(controller,L"Player"))return false;
@@ -495,7 +496,7 @@ bool catalogPending(){return catalogStarted&&!runtime.catalogReady;}
 bool inventoryPending(){return runtime.catalogReady&&(!addedItems.empty()||inventoryScanning||inventoryDirty);}
 void stepInventory(){
     const auto generation=inventoryGeneration;
-    if(!runtime.inventory){inventoryScanning=false;scanOwner={};addedItems.clear();inventoryDirty=false;return;}
+    if(!runtime.inventory){inventoryScanning=false;scanOwner={};inventoryItems.clear();inventoryCaptured=false;addedItems.clear();inventoryDirty=false;return;}
     if(!addedItems.empty()){
         auto start=std::chrono::steady_clock::now();unsigned count=0;bool learned=false;
         while(!addedItems.empty()&&count++<8){
@@ -528,34 +529,40 @@ void stepInventory(){
         if(logging)++runtime.inventorySnapshots;
         return; // Source acquisition and traversal have separate frame budgets.
     }
-    auto advance=[] {inventoryCursor=0;if(++inventoryPhase>=3){inventoryScanning=false;scanOwner={};if(logging)trace(L"Collection scan complete: known appearances="+std::to_wstring(runtime.model.collected.size())+L", stash="+(runtime.storage?L"available":L"unavailable"));}else scanOwner=inventoryPhase==2?runtime.storage:runtime.inventory;};
+    auto advance=[] {inventoryCursor=0;inventoryItems.clear();inventoryCaptured=false;if(++inventoryPhase>=2){inventoryScanning=false;scanOwner={};if(logging)trace(L"Collection scan complete: known appearances="+std::to_wstring(runtime.model.collected.size())+L", stash="+(runtime.storage?L"available":L"unavailable"));}else scanOwner=runtime.storage;};
     auto owner=scanOwner.get();if(!owner||!inventorySource(owner)){advance();return;}
-    bool equipment=inventoryPhase==1;auto field=property(owner,equipment?L"EquipmentSlots":L"InventoryItems");
-    if(!field||!field->IsA<FMapProperty>()){
-        warn(equipment?L"Collection equipment map unavailable; backpack and stash scans remain enabled.":L"Collection inventory map unavailable; pickup tracking remains enabled.");advance();return;
+    if(!inventoryCaptured){
+        // InventoryItems and EquipmentSlots are authored starting contents.
+        // GetCurrentItems reads the live inventory, including equipped items.
+        // Its owned return buffer dies here; only deletion-aware identities
+        // survive to the bounded learning slices on subsequent frames.
+        Call snapshot(owner,L"GetCurrentItems");auto result=snapshot?snapshot.fn->GetReturnProperty():nullptr;
+        auto array=result&&result->IsA<FArrayProperty>()?static_cast<FArrayProperty*>(result):nullptr;
+        auto inner=array?array->GetInner():nullptr;
+        auto type=inner&&inner->IsA<FStructProperty>()?static_cast<FStructProperty*>(inner)->GetStruct():nullptr;
+        auto item=type?property(type,L"ItemDataAsset"):nullptr,quantity=type?property(type,L"Quantity"):nullptr;
+        if(!item||!item->IsA<FObjectProperty>()||!quantity||!quantity->IsA<FNumericProperty>()||static_cast<FNumericProperty*>(quantity)->IsFloatingPoint()){
+            warn(L"Collection query needs item references and integer quantities; skipping this inventory.");advance();return;
+        }
+        snapshot.invoke();
+        if(generation!=inventoryGeneration||!scanOwner.matches(owner)||!inventorySource(owner))return;
+        FScriptArrayHelper values(array,result->ContainerPtrToValuePtr<void>(snapshot.data()));
+        if(values.Num()<0||values.Num()>16384){warn(L"Collection inventory exceeds the supported safety limit.");advance();return;}
+        inventoryItems.clear();inventoryItems.reserve(values.Num());
+        for(int i=0;i<values.Num();++i){auto value=values.GetRawPtr(i);if(integer(quantity,value)>0)if(auto object=readObject(item,value))inventoryItems.emplace_back(object);}
+        inventoryCaptured=true;
+        if(logging)trace(L"Collection live inventory: source="+std::wstring(inventoryPhase?L"stash":L"player")+L", items="+std::to_wstring(inventoryItems.size()));
+        return; // One inventory query/capture or learning slice per frame.
     }
-    auto mapProperty=static_cast<FMapProperty*>(field);auto key=mapProperty->GetKeyProp(),value=mapProperty->GetValueProp();
-    auto itemProperty=equipment?value:key;FProperty* quantity{};
-    if(!equipment&&value&&value->IsA<FStructProperty>())quantity=property(static_cast<FStructProperty*>(value)->GetStruct(),L"Quantity");
-    if(!itemProperty||!itemProperty->IsA<FObjectPropertyBase>()||(!equipment&&(!quantity||!quantity->IsA<FNumericProperty>()||static_cast<FNumericProperty*>(quantity)->IsFloatingPoint()))){
-        warn(L"Collection map needs object item references and integer quantities; skipping this source.");advance();return;
-    }
-    auto& layout=mapProperty->GetMapLayout();
-    auto map=field->ContainerPtrToValuePtr<FScriptMap>(owner);
-    if(map->Num()<0||map->Num()>16384||map->GetMaxIndex()<0||map->GetMaxIndex()>32768){warn(L"Collection inventory exceeds the supported safety limit.");advance();return;}
-    // Reacquire sparse storage each slice. No return struct, container element
-    // or untracked UObject address survives to a later frame.
     bool learned=false;auto start=std::chrono::steady_clock::now();unsigned count=0;
-    while(inventoryCursor<static_cast<unsigned>(map->GetMaxIndex())&&count++<32){
-        auto index=inventoryCursor++;if(!map->IsValidIndex(index))continue;
-        auto pair=static_cast<unsigned char*>(map->GetData(index,layout));auto data=pair+layout.ValueOffset;
-        if(equipment||integer(quantity,data)>0)learned|=learnInventoryItem(static_cast<FObjectPropertyBase*>(itemProperty)->GetObjectPropertyValue(equipment?data:pair));
+    while(inventoryCursor<inventoryItems.size()&&count++<32){
+        learned|=learnInventoryItem(inventoryItems[inventoryCursor++].get());
         if(logging)++runtime.inventoryItems;
         if(generation!=inventoryGeneration||!scanOwner.matches(owner))return;
         if(std::chrono::steady_clock::now()-start>std::chrono::microseconds(500))break;
     }
     if(learned){runtime.dirty=true;menuRedraw();}
-    if(inventoryCursor>=static_cast<unsigned>(map->GetMaxIndex()))advance();
+    if(inventoryCursor>=inventoryItems.size())advance();
 }
 bool refresh(){
     MeasureOperation timing(Operation::Refresh);

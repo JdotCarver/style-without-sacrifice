@@ -1,4 +1,3 @@
-# Style Without Sacrifice 1.1.2
+# Style Without Sacrifice 1.1.3-dev
 
-- Fix missing collected appearances from picked-up, equipped and stashed equipment.
-- Refresh collected looks after loading a game or opening Wardrobe, including previously missed weapons.
+- Fix owned armour and weapons missing from Collected, including newly purchased equipment.

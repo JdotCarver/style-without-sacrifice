@@ -69,10 +69,10 @@
         "VortexExtension"
       ],
       "pending": {
-        "impact": "none",
-        "rationale": "Matches the verified Nexus release.",
+        "impact": "patch",
+        "rationale": "Fix collection scans reading authored starting contents instead of current backpack, equipped and stash inventory; skip attachment attempts for menu pawns without required components.",
         "majorOverride": false,
-        "reviewedInputs": "f2c5d03db24c7d5059d05d98fd7bc43b64a56bbb079e262cc38fb1f2a42e5280",
+        "reviewedInputs": "03e7a839534a23727686a682321db8590011de3985143eafc3564c8067ac2e2e",
         "divergenceReviewed": false
       },
       "publication": {
