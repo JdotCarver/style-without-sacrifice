@@ -70,9 +70,9 @@
       ],
       "pending": {
         "impact": "patch",
-        "rationale": "Fix collection scans reading authored starting contents instead of current backpack, equipped and stash inventory; skip attachment attempts for menu pawns without required components.",
+        "rationale": "Correct current inventory collection for owned and purchased equipment and avoid impossible menu-pawn attachment attempts.",
         "majorOverride": false,
-        "reviewedInputs": "03e7a839534a23727686a682321db8590011de3985143eafc3564c8067ac2e2e",
+        "reviewedInputs": "3dde05234411440fb79584244af2d6c9e6b3dc7644682aaa2ca22b90988697ee",
         "divergenceReviewed": false
       },
       "publication": {

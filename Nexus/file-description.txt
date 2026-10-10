@@ -1,2 +1,1 @@
-Fix missing collected appearances from picked-up, equipped and stashed equipment.
-Refresh collected looks after loading a game or opening Wardrobe, including previously missed weapons.
+Fix owned armour and weapons missing from Collected, including newly purchased equipment.
