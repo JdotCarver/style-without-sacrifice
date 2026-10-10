@@ -69,10 +69,10 @@
         "VortexExtension"
       ],
       "pending": {
-        "impact": "none",
-        "rationale": "Matches the verified Nexus release.",
+        "impact": "patch",
+        "rationale": "Fix collected appearance tracking for reference-parameter pickups, backpack/equipment/stash reconciliation and late weapon assets; recover after loading completion and avoid main-menu retries. Preserve settings, wardrobe storage and native cosmetic behavior. Reproducible generated DLL includes the final Wardrobe-tab recovery route.",
         "majorOverride": false,
-        "reviewedInputs": "d012134dc8aef5894c1e3034a0f55359f86f3754637b696034d24ec3c448c305",
+        "reviewedInputs": "899eff62b12780ef1e0e8f06f433ca11b220fec1206c80819b4c2ffaa6863e15",
         "divergenceReviewed": false
       },
       "publication": {

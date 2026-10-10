@@ -276,7 +276,7 @@ void show(){
     try{Call background(object(hub,L"Background"),L"SetBackgroundTexture");auto p=background.field(L"InBackgroundTexture");if(p&&p->IsA<FSoftObjectProperty>()&&p->ImportText_Direct(L"/Game/_Dawnwalker/UI/_Unified/SharedTextures/Backgrounds/Fullscreen/T_Background_Inventory_and_InventoryStats.T_Background_Inventory_and_InventoryStats",background.value(L"InBackgroundTexture"),nullptr,0,nullptr))background.num(L"WithFadeOut",0).invoke();}catch(const std::exception& e){failure(L"Inventory background",e);}
     if(auto nav=navbar.get()){Call selectTab(nav,L"SelectTab");if(selectTab){tag(selectTab.field(L"InTabTag"),selectTab.data(),tagName);selectTab.invoke();}}
     bindInputLayers();
-    runtime.menuOpen=true;runtime.model.switchSet(runtime.activeSet);wantsOpen=false;popup=0;redraw=true;beginCatalog();preview();if(logging)trace(L"Wardrobe page opened.");
+    runtime.menuOpen=true;runtime.model.switchSet(runtime.activeSet);wantsOpen=false;popup=0;redraw=true;requestInventoryScan();beginCatalog();preview();if(logging)trace(L"Wardrobe page opened.");
     for(int i=0;i<256;++i)previousKeys[i]=(GetAsyncKeyState(i)&0x8000)!=0;
     GetCursorPos(&previousMouse);xPressed=0;stick.reset();
     hadInputFocus=false;resetControllerInput();
@@ -403,6 +403,7 @@ void menuScriptPost(UObject* owner,UFunction* fn,void* params,FFrame* frame){
     }
 }
 void openMenu(){
+    requestInventoryScan();
     MeasureOperation timing(Operation::Open);
     if(!runtime.player)return;wantsOpen=true;
     // The normal hub owns pause/input and navigation. Its creation event then

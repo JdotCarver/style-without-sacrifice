@@ -34,7 +34,7 @@ Wardrobe uses the game's controller input, including while the character menu is
 
 All actions also have on-screen mouse controls. The action hints use the game's keyboard and Xbox glyphs and follow the active input device. D-pad Left / Right moves one item horizontally; Up / Down moves one row vertically. Tilt the right stick up for Previous or down for Next; the page buttons show matching indicators. Each tilt changes one page, so release the stick before paging again. Moving beyond a page with the D-pad or left stick also continues onto the adjacent page. Hold the left stick to repeat item movement; vertical navigation preserves the column when crossing pages. Changing the previewed day/night set does not change your active equipment loadout. Each page holds up to 36 choices; focus a tile to see its name below the grid. The equipment panel shows the displayed outfit, with the selected category's name underneath. NPC appearances without an inventory image use their category symbol.
 
-Within each category, **Player Outfits** with inventory icons appear first, followed by **NPC Outfits** without item icons. Both groups sort alphabetically by their displayed names, ignoring case. Each group starts on its own page and has a small heading above the grid. **Original look** and **Hide**, where available, stay at the front of the list. The same order applies when filtering collected looks.
+Within each category, **Player Outfits** with inventory icons appear first, followed by **NPC Outfits** without item icons. Both groups sort alphabetically by their displayed names, ignoring case. Each group starts on its own page and has a small heading above the grid. **Original look** and **Hide**, where available, stay at the front of the list. The same order applies when filtering collected looks. These group names describe whether an appearance has an inventory icon; they do not indicate ownership.
 
 ## Settings and saved outfits
 
@@ -42,7 +42,7 @@ Use Mod Setting Menu to change **Enabled**, the **Wardrobe shortcut**, and **Log
 
 If you encounter an issue, set **Logging** to **Debug** in this mod's Mod Setting Menu settings, apply the change, reproduce the issue, and send me `Dawnwalker/Binaries/Win64/ue4ss/UE4SS.log` from your game folder.
 
-The mod creates `settings.ini` and `wardrobe.dat` inside `ue4ss/Mods/WardrobeTransmog`. These personal files are not included in the download. Keep a backup of both files. Outfits and collected appearances are shared across saves; collection starts with items observed while this mod is active. The All Looks filter gives access to the rest of the catalog.
+The mod creates `settings.ini` and `wardrobe.dat` inside `ue4ss/Mods/WardrobeTransmog`. These personal files are not included in the download. Keep a backup of both files. Outfits and collected appearances are shared across saves. Collected looks include supported equipment in your backpack, equipped slots and stash when you load a game or open Wardrobe, plus items picked up while the mod is active. Equipping or transferring items also refreshes the collection. Previously recorded looks remain available after an item is sold or stored. Items sold before the mod first observed them are not recovered from save history. The All Looks filter gives access to the rest of the catalog.
 
 Selecting **Original look** restores that slot's equipped appearance. **Reset Set** clears the displayed outfit. Presets store one complete outfit and can be loaded into either set.
 
@@ -54,7 +54,7 @@ The character preview stays in place while you change looks or save outfits. Sel
 
 With Logging set to Debug, a completed page records its group, visible-entry and cached-image counts. Page construction is limited to two entries per continuation. Grouping uses saved icon references without loading preview textures for the full catalog.
 
-Logging offers Off, Error, Warning, Info and Debug; Warning is the default. Levels include messages from the preceding levels, and Off suppresses all mod-owned output. Select Debug in Mod Setting Menu and apply it to record player attachment, menu creation, controller ownership and event counts, appearance work, and aggregate timings in `Dawnwalker/Binaries/Win64/ue4ss/UE4SS.log`. Controller compatibility failures identify the required entry point or layout that could not be verified. Repeated failures are suppressed. Failed player setup stops after twelve attempts; a later player event or shortcut press can retry it.
+Logging offers Off, Error, Warning, Info and Debug; Warning is the default. Levels include messages from the preceding levels, and Off suppresses all mod-owned output. Select Debug in Mod Setting Menu and apply it to record player attachment, menu creation, controller ownership and event counts, appearance work, and aggregate timings in `Dawnwalker/Binaries/Win64/ue4ss/UE4SS.log`. Controller compatibility failures identify the required entry point or layout that could not be verified. Repeated failures are suppressed. Loading completion restores player tracking and refreshes collected appearances. Main-menu pawns do not start player setup retries. Once a local gameplay player exists, delayed component setup is limited to twelve attempts; a later load, player event or shortcut press can retry it.
 
 ## Source
 

@@ -1,5 +1,5 @@
-# Style Without Sacrifice 1.1.1
+# Style Without Sacrifice 1.1.2-dev
 
-- Fix D-pad navigation so Left / Right moves between items and Up / Down moves between rows.
-- Change pages with right-stick Up / Down and show matching Previous / Next indicators.
-- Fix controller input being disabled on otherwise compatible game builds.
+- Fix missing collected appearances from pickups, equipped gear and stashed equipment.
+- Refresh collected looks after loading a game or opening Wardrobe, including previously missed weapons.
+- Avoid repeated player setup attempts in the main menu.
