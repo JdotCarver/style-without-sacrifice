@@ -70,9 +70,9 @@
       ],
       "pending": {
         "impact": "patch",
-        "rationale": "Fix collected appearance tracking for reference-parameter pickups, backpack/equipment/stash reconciliation and late weapon assets; recover after loading completion and avoid main-menu retries. Preserve settings, wardrobe storage and native cosmetic behavior. Reproducible generated DLL includes the final Wardrobe-tab recovery route.",
+        "rationale": "Complete verified Nexus 1.1.1 delta: fix reference-parameter pickups and collection reconciliation for backpack, equipment, stash and late weapons; recover after loading completion and avoid main-menu retries. Preserve settings, saved appearances and native cosmetic behavior. Update player-facing collection documentation and release copy. Rebuilt release-version DLL is behavior-identical to tested 669bdda.",
         "majorOverride": false,
-        "reviewedInputs": "899eff62b12780ef1e0e8f06f433ca11b220fec1206c80819b4c2ffaa6863e15",
+        "reviewedInputs": "8c5d4c4eca891936b455cbb4667ed92cb9d1bbb1a6cd73e9ab985bdafea5f54c",
         "divergenceReviewed": false
       },
       "publication": {
