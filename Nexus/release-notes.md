@@ -1,5 +1,3 @@
-# Style Without Sacrifice 1.1.1
+# Style Without Sacrifice 1.1.3
 
-- Fix D-pad navigation so Left / Right moves between items and Up / Down moves between rows.
-- Change pages with right-stick Up / Down and show matching Previous / Next indicators.
-- Fix controller input being disabled on otherwise compatible game builds.
+- Fix owned armour and weapons missing from Collected, including newly purchased equipment.

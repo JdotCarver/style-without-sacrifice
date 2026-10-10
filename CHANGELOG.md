@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.3
+
+- Fix owned armour and weapons missing from Collected, including newly purchased equipment.
+
+## 1.1.2
+
+- Fix missing collected appearances from picked-up, equipped and stashed equipment.
+- Refresh collected looks after loading a game or opening Wardrobe, including previously missed weapons.
+
 ## 1.1.1
 
 - Fix D-pad navigation so Left / Right moves between items and Up / Down moves between rows.

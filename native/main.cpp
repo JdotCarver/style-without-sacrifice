@@ -20,21 +20,40 @@ std::mutex settingsMutex;Settings requested;
 Ref pendingPlayer,pendingHub;std::atomic_bool active{},hubQueued{};std::mutex hubMutex;uint64_t lastSummary{},saveDue{};
 Ref weaponClass,pawnClass;
 std::unordered_map<UFunction*,ScriptEvent> weaponGraphs;
-bool openAfterAttach{};
+bool openAfterAttach{},loadInProgress{};Ref loadingWidget;
 std::vector<Hook::GlobalCallbackId> callbacks;
 struct FunctionHook {Ref fn;std::pair<int,int> ids;};std::vector<FunctionHook> functionHooks;
 void resetSession(){
     openAfterAttach=false;
     closeMenu();resetMenu();runtime.attachWork.cancel();runtime.refreshWork.cancel();resetCosmetics(true);
-    runtime.player={};runtime.controller={};runtime.inventory={};runtime.appearance={};runtime.doll={};runtime.dollAppearance={};runtime.hub={};pendingPlayer={};clearReflection();
+    runtime.player={};runtime.controller={};runtime.inventory={};runtime.storage={};runtime.appearance={};runtime.doll={};runtime.dollAppearance={};runtime.hub={};pendingPlayer={};clearReflection();
 }
 void requestPlayer(UObject* pawn){
-    if(!pawn)return;
+    if(loadInProgress||!pawn)return;
+    auto controller=object(pawn,L"Controller");if(!controller||!object(controller,L"Player"))return;
+    // Menu/spectator pawns can have a local Player too, but cannot attach.
+    if(!object(pawn,L"InventoryComponent")||!object(pawn,L"AppearanceComponent"))return;
     if(runtime.attachWork.pending&&pendingPlayer.matches(pawn))return;
     // ClientRestart can reuse the pawn across saves. Tear down its preview and
     // release old visual edits before binding the new inventory/appearance state.
     if(runtime.player.address){bool reopen=openAfterAttach;resetSession();openAfterAttach=reopen;}
     pendingPlayer=Ref(pawn);runtime.attachWork.cancel();runtime.attachWork.request(runtime.now);
+}
+void loadingStarted(UObject* widget){
+    if(loadInProgress&&loadingWidget.matches(widget))return;
+    loadInProgress=true;loadingWidget=Ref(widget);opening=false;resetSession();
+}
+void loadingFinished(UObject* widget){
+    if(!widget)return;
+    if(loadInProgress&&loadingWidget.address&&!loadingWidget.matches(widget))return;
+    if(!loadInProgress&&loadingWidget.matches(widget))return;
+    loadInProgress=false;loadingWidget=Ref(widget);resetSession();
+    // Resolve the controller for this widget's world, never the first stale
+    // controller in the object array. A main-menu completion queues no retries.
+    Call player(find(L"/Script/Engine.Default__GameplayStatics"),L"GetPlayerController");
+    if(!player)return;
+    player.obj(L"WorldContextObject",widget).num(L"PlayerIndex",0).invoke();
+    if(auto pc=player.resultObject())if(object(pc,L"Player"))requestPlayer(object(pc,L"AcknowledgedPawn"));
 }
 void registerFunction(const wchar_t* path,std::function<void(UnrealScriptFunctionCallableContext&,UFunction*)> callback){
     auto fn=static_cast<UFunction*>(find(path));if(!fn){warn(std::wstring(L"Optional event unavailable: ")+path);return;}
@@ -83,12 +102,18 @@ void setup(){
         static const FName hubName(L"WBP_Window_GameHub_C");auto h=c.Context;
         if(h&&h->GetClassPrivate()->GetFName()==hubName)queueHub(h);
     });
+    registerFunction(L"/Script/DogwoodUI.DWLoadingScreenWidget:NotifyLoadingScreenStarted",[](auto& c,auto*){loadingStarted(c.Context);});
+    registerFunction(L"/Script/DogwoodUI.DWLoadingScreenWidget:OnFadeOutFinished",[](auto& c,auto*){loadingFinished(c.Context);});
     registerFunction(L"/Script/Engine.PlayerController:ClientRestart",[](auto& c,auto*){if(auto p=object(c.Context,L"AcknowledgedPawn"))requestPlayer(p);});
     for(auto name:{L"SetActiveLoadout",L"TryAddItem",L"TryAddAndEquipItem",L"TryEquipItem",L"TryEquipItemInSlot",L"UnequipItem",L"RequestItemUnequip"}){
         auto path=std::wstring(L"/Script/DogwoodInventory.InventoryComponent:")+name;
         bool equipment=std::wstring_view(name)!=L"TryAddItem";
         bool addition=std::wstring_view(name)==L"TryAddItem"||std::wstring_view(name)==L"TryAddAndEquipItem";
-        registerFunction(path.c_str(),[equipment,addition](auto& c,auto* fn){if(runtime.inventory.matches(c.Context)){if(addition)inventoryAdded(fn,c.TheStack.Locals());inventoryChanged(equipment);}});
+        registerFunction(path.c_str(),[equipment,addition](auto& c,auto* fn){if(!loadInProgress&&inventorySource(c.Context)){if(addition)inventoryAdded(c.Context,fn,c.TheStack);inventoryChanged(equipment);}});
+    }
+    for(auto name:{L"TransferItem",L"TransferAllItems"}){
+        auto path=std::wstring(L"/Script/DogwoodInventory.InventorySubsystem:")+name;
+        registerFunction(path.c_str(),[](auto& c,auto*){if(!loadInProgress)inventoryTransferred(c.Context);});
     }
     // One startup fallback supports late loading. Later recovery is driven by
     // ClientRestart/BeginPlay or an explicit open request.
@@ -121,13 +146,15 @@ void tick(){
         bool busy=false;
         if(runtime.attachWork.ready(runtime.now)){
             operation=L"Player attachment";bool ok=false;busy=true;
-            try{ok=attach(pendingPlayer.get());}catch(const std::exception& e){failure(operation,e);}
+            auto pawn=pendingPlayer.get();auto pc=pawn?object(pawn,L"Controller"):nullptr;
+            if(loadInProgress||!pc||!object(pc,L"Player")){runtime.attachWork.cancel();openAfterAttach=false;opening=false;return;}
+            try{ok=attach(pawn);}catch(const std::exception& e){failure(operation,e);}
             runtime.attachWork.finish(ok,runtime.now);
             if(ok&&openAfterAttach){opening=true;openAfterAttach=false;}
             if(!ok&&!runtime.attachWork.pending){openAfterAttach=false;opening=false;warn(L"Player attachment stopped after 12 attempts; a player event or Wardrobe shortcut can retry.");}
         }
         if(requestedOpen&&busy&&(runtime.attachWork.pending||runtime.playerReady))opening=true;
-        if(requestedOpen&&!busy&&runtime.settings.enabled){
+        if(requestedOpen&&!busy&&!loadInProgress&&runtime.settings.enabled){
             operation=L"Wardrobe open";
             if(!runtime.playerReady){
                 openAfterAttach=true;
@@ -144,7 +171,7 @@ void tick(){
         if(!busy&&ui){operation=L"Wardrobe menu";stepMenu();}
         pollStore();
         if(runtime.dirty){if(!saveDue)saveDue=runtime.now+1500;if(runtime.now>=saveDue){writeStore();saveDue=0;}}else saveDue=0;
-        if(logging){auto elapsed=static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-started).count());runtime.workMicros+=elapsed;runtime.maxWorkMicros=std::max(runtime.maxWorkMicros,elapsed);if(runtime.now-lastSummary>=10000){lastSummary=runtime.now;trace(L"Work totals: catalog steps="+std::to_wstring(runtime.catalogSteps)+L", refreshes="+std::to_wstring(runtime.refreshes)+L", weapon appearance events="+std::to_wstring(runtime.weaponEvents)+L", completed character appearances="+std::to_wstring(runtime.appearanceEvents)+L", immediate appearances="+std::to_wstring(runtime.immediateAppearances)+L", appearance us="+std::to_wstring(runtime.appearanceMicros)+L", max appearance us="+std::to_wstring(runtime.maxAppearanceMicros)+L", sheath writes="+std::to_wstring(runtime.sheathWrites)+L", sheath write us="+std::to_wstring(runtime.sheathMicros)+L", max sheath write us="+std::to_wstring(runtime.maxSheathMicros)+L", clothing overrides="+std::to_wstring(runtime.nativeOverrides)+L", inventory snapshots="+std::to_wstring(runtime.inventorySnapshots)+L", inventory entries="+std::to_wstring(runtime.inventoryItems)+L", work us="+std::to_wstring(runtime.workMicros)+L", max tick us="+std::to_wstring(runtime.maxWorkMicros));}}
+        if(logging){auto elapsed=static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-started).count());runtime.workMicros+=elapsed;runtime.maxWorkMicros=std::max(runtime.maxWorkMicros,elapsed);if(runtime.now-lastSummary>=10000){lastSummary=runtime.now;trace(L"Work totals: catalog steps="+std::to_wstring(runtime.catalogSteps)+L", refreshes="+std::to_wstring(runtime.refreshes)+L", weapon appearance events="+std::to_wstring(runtime.weaponEvents)+L", completed character appearances="+std::to_wstring(runtime.appearanceEvents)+L", immediate appearances="+std::to_wstring(runtime.immediateAppearances)+L", appearance us="+std::to_wstring(runtime.appearanceMicros)+L", max appearance us="+std::to_wstring(runtime.maxAppearanceMicros)+L", sheath writes="+std::to_wstring(runtime.sheathWrites)+L", sheath write us="+std::to_wstring(runtime.sheathMicros)+L", max sheath write us="+std::to_wstring(runtime.maxSheathMicros)+L", clothing overrides="+std::to_wstring(runtime.nativeOverrides)+L", inventory scans="+std::to_wstring(runtime.inventorySnapshots)+L", inventory entries="+std::to_wstring(runtime.inventoryItems)+L", work us="+std::to_wstring(runtime.workMicros)+L", max tick us="+std::to_wstring(runtime.maxWorkMicros));}}
         if(logging&&lastSummary!=previousSummary){
             constexpr const wchar_t* names[]={L"attachment",L"catalog",L"catalog index",L"asset load",L"refresh",L"menu",L"open"};
             for(size_t i=0;i<operationTimings.size();++i){const auto& t=operationTimings[i];if(t.count)trace(std::wstring(L"Operation totals (nested, do not sum): ")+names[i]+L", calls="+std::to_wstring(t.count)+L", us="+std::to_wstring(t.micros)+L", max us="+std::to_wstring(t.maximum));}
@@ -167,7 +194,7 @@ static_assert(sizeof(CppUserModBase)==192);
 static_assert(sizeof(Unreal::Hook::FCallbackOptions)==72);
 class WardrobeMod final:public CppUserModBase {
 public:
-    WardrobeMod(){ModName=L"Style Without Sacrifice - Your Transmogrification Wardrobe";ModVersion=L"1.1.1";ModAuthors=L"my-mods";ModDescription=L"An independent wardrobe tab with separate day and night outfits.";}
+    WardrobeMod(){ModName=L"Style Without Sacrifice - Your Transmogrification Wardrobe";ModVersion=L"1.1.3";ModAuthors=L"my-mods";ModDescription=L"An independent wardrobe tab with separate day and night outfits.";}
     void on_lua_start(StringViewType name,LuaMadeSimple::Lua& lua,LuaMadeSimple::Lua&,LuaMadeSimple::Lua&,LuaMadeSimple::Lua*)override{
         if(name!=L"WardrobeTransmog")return;
         lua.register_function("_WCConfigureLogV2",[](const auto& l){Wardrobe::Settings s;s.enabled=l.get_integer(1)!=0;s.openKey=static_cast<unsigned>(std::clamp<int64_t>(l.get_integer(1),0,3));s.logLevel=static_cast<int>(std::clamp<int64_t>(l.get_integer(1),0,4));s.debugLogging=s.logLevel==4;Wardrobe::logLevel=s.logLevel;Wardrobe::configure(s);return 0;});

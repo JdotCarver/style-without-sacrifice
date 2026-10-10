@@ -9,7 +9,7 @@ namespace Wardrobe {
 struct Look {Slot slot;std::wstring row,label,itemPath;Ref item;bool hasPreviewIcon{};std::string sortKey;};
 struct Runtime {
     Model model;Settings settings;std::filesystem::path directory;
-    Ref player,controller,inventory,appearance,doll,dollAppearance,hub;
+    Ref player,controller,inventory,storage,appearance,doll,dollAppearance,hub;
     Work attachWork,refreshWork;uint64_t frame{},now{};
     bool playerRefresh{},previewRefresh{};
     bool menuOpen{},catalogReady{},playerReady{},dirty{},shuttingDown{},persistenceBlocked{};
@@ -33,7 +33,8 @@ void menuScriptPost(UObject*,UFunction*,void*,RC::Unreal::FFrame*);
 void menuRedraw();
 bool menuPending();bool catalogPending();void inventoryChanged(bool equipment=false);
 void requestRefresh(bool player=true,bool preview=true);bool inventoryPending();void stepInventory();
-void inventoryAdded(UFunction*,void*);
+void inventoryAdded(UObject*,UFunction*,RC::Unreal::FFrame&);
+bool inventorySource(UObject*);void requestInventoryScan();void inventoryTransferred(UObject*);
 void cancelCosmeticWork();
 void configure(Settings);void requestOpen();void tick();void stop();
 void queueHub(UObject*);

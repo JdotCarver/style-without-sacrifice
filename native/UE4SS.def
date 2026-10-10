@@ -137,3 +137,7 @@ EXPORTS
     ?register_function@Lua@LuaMadeSimple@RC@@QEBAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBQ6AHAEBV123@@Z@Z
     ?render_tab@CppUserModBase@RC@@UEAAXXZ
     ?send@Output@RC@@YAXV?$basic_string_view@_WU?$char_traits@_W@std@@@std@@@Z
+    ?GetKeyProp@FMapProperty@Unreal@RC@@QEAAAEAPEAVFProperty@23@XZ
+    ?GetMapLayout@FMapProperty@Unreal@RC@@QEAAAEAUFScriptMapLayout@23@XZ
+    ?GetValueProp@FMapProperty@Unreal@RC@@QEAAAEAPEAVFProperty@23@XZ
+    ?StaticClass@FMapProperty@Unreal@RC@@SA?AVFFieldClassVariant@23@XZ
