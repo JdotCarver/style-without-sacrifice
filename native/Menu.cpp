@@ -121,20 +121,36 @@ void updateSummary(){
     for(auto& b:controls)if(b.category>=0&&b.category<5)UI::visible(b.highlight.get(),unsigned(b.category)==runtime.model.category);
     setText(summaryTitle.get(),L"SetText",slotLabels[runtime.model.category]);setText(summaryChoice.get(),L"SetText",caption(runtime.model.sets[runtime.model.displayedSet][runtime.model.category]));shownRevision=runtime.model.revision;focusPaint();
 }
+// Auto retains the existing last-input keyboard/Xbox behavior. Manual choices
+// affect presentation only, including when controller middleware reports Xbox.
+unsigned glyphStyle(){return runtime.settings.controllerGlyphs?runtime.settings.controllerGlyphs:(controllerInput?2u:1u);}
+const wchar_t* ps5Key(const wchar_t* key){
+    if(!key)return nullptr;
+    const std::wstring value=key;
+    if(value==L"A")return L"Cross";if(value==L"B")return L"Circle";
+    if(value==L"X")return L"Square";if(value==L"Y")return L"Triangle";
+    if(value==L"Menu")return L"Options";
+    if(value==L"LT")return L"L2";if(value==L"RT")return L"R2";
+    return key; // Stick press/direction names are shared by both stock sets.
+}
 UObject* promptGlyph(const wchar_t* keyboard,const wchar_t* controller){
-    std::wstring leaf=controllerInput?L"T_Controls_Xbox_":L"T_Controls_Pc_Keyboard_";leaf+=controllerInput?controller:keyboard;
+    auto style=glyphStyle();const wchar_t* key=style==1?keyboard:style==3?ps5Key(controller):controller;
+    if(!key)return nullptr;
+    std::wstring leaf=style==1?L"T_Controls_Pc_Keyboard_":style==3?L"T_Controls_PS5_":L"T_Controls_Xbox_";leaf+=key;
     auto it=glyphTextures.find(leaf);if(it!=glyphTextures.end()&&(!it->second.address||it->second))return it->second.get();
-    std::wstring path=L"/Game/_Dawnwalker/UI/_Unified/SharedTextures/Controls/";path+=controllerInput?L"Microsoft_Xbox/Frames/":L"KeyboardAndMouse/Frames/";path+=leaf+L"."+leaf;
+    std::wstring path=L"/Game/_Dawnwalker/UI/_Unified/SharedTextures/Controls/";
+    path+=style==1?L"KeyboardAndMouse/Frames/":style==3?L"Sony_DualSense/Frames/":L"Microsoft_Xbox/Frames/";path+=leaf+L"."+leaf;
     auto result=asset(path.c_str());glyphTextures[leaf]=Ref(result);return result;
 }
 void inputHints(){
+    const bool padHints=glyphStyle()!=1;
     for(auto& c:controls){const wchar_t* value=nullptr;const wchar_t* key=nullptr;const wchar_t* pad=nullptr;
         switch(c.category){
         case 10:value=runtime.model.displayedSet?L"Night set":L"Day set";key=L"P";pad=L"Menu";break;
         case 11:value=runtime.model.allLooks?L"Collected":L"All looks";key=L"Y";pad=L"R_Press";break;
         case 12:value=L"Save outfit";key=L"T";pad=L"X";break;
         case 13:value=L"Load outfit";key=L"S";pad=L"Y";break;
-        case 14:value=controllerInput?L"Hold: Reset set":L"Reset set";key=L"R";pad=L"X";break;
+        case 14:value=padHints?L"Hold: Reset set":L"Reset set";key=L"R";pad=L"X";break;
         case 15:value=L"Back";key=L"Esc";pad=L"B";break;
         case 16:value=L"Hide slot";key=L"F";pad=L"L_Press";break;
         case 17:key=L"A";pad=L"LT";break;
@@ -144,7 +160,7 @@ void inputHints(){
         case 100:value=L"Cancel";key=L"Esc";pad=L"B";break;
         }
         if(value&&c.label)setText(c.label.get(),L"SetText",value);
-        if(key&&c.glyph){UI::visible(c.glyph.get(),!controllerInput||pad);if(!controllerInput||pad)UI::texture(c.glyph.get(),promptGlyph(key,pad));}
+        if(key&&c.glyph){UI::visible(c.glyph.get(),!padHints||pad);if(!padHints||pad)UI::texture(c.glyph.get(),promptGlyph(key,pad));}
         if(c.category==16)setNumber(c.object.get(),L"SetIsEnabled",L"bInIsEnabled",hideAllowed(static_cast<Slot>(runtime.model.category)));
     }paintHints=false;
 }
@@ -452,6 +468,9 @@ void stepMenu(){
     int analog=stick.poll(input.x,input.y,runtime.now);
     bool padActivity=edges||analog||input.leftEdge||input.rightEdge;
     if(padActivity&&!controllerInput){controllerInput=true;paintHints=true;}
+    // Settings arrive through the existing committed callback, without I/O or discovery.
+    static unsigned paintedGlyphs=~0u;auto style=glyphStyle();
+    if(style!=paintedGlyphs){paintedGlyphs=style;paintHints=true;}
     if(paintHints)inputHints();
     bool escape=pressed(VK_ESCAPE)||(edges&Pad::B);if(escape){if(popup){popup=0;redraw=true;}else closeMenu();xPressed=0;return;}
     if(!popup){

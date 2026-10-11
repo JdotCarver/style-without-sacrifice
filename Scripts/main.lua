@@ -9,14 +9,22 @@ if not loaded then
     return
 end
 ModDiagnosticLevel=values.logLevel
-if type(_WCConfigureLogV2)~="function" or type(_WCStart)~="function" then
+local hasGlyphs=type(_WCConfigureGlyphsV3)=="function"
+if (not hasGlyphs and type(_WCConfigureLogV2)~="function") or type(_WCStart)~="function" then
     if values.logLevel>=1 then print("[WardrobeTransmog][ERROR] Native component unavailable; enable the complete mod and restart.\n") end
     return
+end
+if not hasGlyphs and values.logLevel>=2 then
+    print("[WardrobeTransmog][WARNING] Controller Glyphs requires _WCConfigureGlyphsV3 from the updated native component; using automatic keyboard/Xbox prompts. Replace the complete package and restart.\n")
 end
 local function apply(committed)
     values=Settings.normalize(committed)
     ModDiagnosticLevel=values.logLevel
-    _WCConfigureLogV2(values.enabled,values.openKey,values.logLevel)
+    if hasGlyphs then
+        _WCConfigureGlyphsV3(values.enabled,values.openKey,values.logLevel,values.controllerGlyphs)
+    else
+        _WCConfigureLogV2(values.enabled,values.openKey,values.logLevel)
+    end
 end
 -- Bind each supported key once. Apply only switches the selected binding.
 for index,key in ipairs({Key.END,Key.F7,Key.F8,Key.F9}) do

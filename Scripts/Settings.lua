@@ -1,7 +1,7 @@
 -- Style Without Sacrifice - Your Transmogrification Wardrobe. MIT.
 local M = {}
-M.order = {"enabled", "openKey", "logLevel"}
-M.rules = {enabled={1,0,1}, openKey={0,0,3}, logLevel={2,0,4}}
+M.order = {"enabled", "openKey", "controllerGlyphs", "logLevel"}
+M.rules = {enabled={1,0,1}, openKey={0,0,3}, controllerGlyphs={0,0,3}, logLevel={2,0,4}}
 function M.normalize(values)
     local out={}
     for _,key in ipairs(M.order) do
