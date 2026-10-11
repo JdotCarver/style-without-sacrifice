@@ -70,9 +70,9 @@
       ],
       "pending": {
         "impact": "minor",
-        "rationale": "Add optional PS5, Xbox and keyboard Wardrobe glyph overrides with preserved Auto behavior, settings migration and V2 native fallback; update player copy and retain exact SDK revision checks without changing into the SDK checkout. Complete delta from Nexus 1.1.3 reviewed.",
+        "rationale": "Release preparation for PS5 glyph selector from verified Nexus 1.1.3; runtime inputs match tested e41a695 except release version. DLL rebuilt with 1.2.0; current file description and exact Configuration page patch prepared.",
         "majorOverride": false,
-        "reviewedInputs": "648e55d0f156eaed7876e2b3345c6dd4e67c3fa88469ae563d805b5539c1f7ba",
+        "reviewedInputs": "bb337ed65c33e10836ed233e8c7f07cbf0682124bb30c1bea206114f01e57b6b",
         "divergenceReviewed": false
       },
       "publication": {

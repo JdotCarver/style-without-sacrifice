@@ -1,1 +1,1 @@
-Fix owned armour and weapons missing from Collected, including newly purchased equipment.
+Add Controller Glyphs with Auto, Keyboard, Xbox and PS5 button symbols for Wardrobe prompts.
