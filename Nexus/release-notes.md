@@ -1,3 +1,3 @@
-# Style Without Sacrifice 1.1.3
+# Style Without Sacrifice 1.2.0-dev
 
-- Fix owned armour and weapons missing from Collected, including newly purchased equipment.
+- Add Controller Glyphs with Auto, Keyboard, Xbox and PS5 button symbols for Wardrobe prompts.

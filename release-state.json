@@ -69,10 +69,10 @@
         "VortexExtension"
       ],
       "pending": {
-        "impact": "none",
-        "rationale": "Matches the verified Nexus release.",
+        "impact": "minor",
+        "rationale": "Add optional PS5, Xbox and keyboard Wardrobe glyph overrides with preserved Auto behavior, settings migration and V2 native fallback; update player copy and retain exact SDK revision checks without changing into the SDK checkout. Complete delta from Nexus 1.1.3 reviewed.",
         "majorOverride": false,
-        "reviewedInputs": "3dde05234411440fb79584244af2d6c9e6b3dc7644682aaa2ca22b90988697ee",
+        "reviewedInputs": "648e55d0f156eaed7876e2b3345c6dd4e67c3fa88469ae563d805b5539c1f7ba",
         "divergenceReviewed": false
       },
       "publication": {
